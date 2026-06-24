@@ -17,22 +17,35 @@ public struct ContentItemRatingView: View {
   private static let imdbGold = Color(red: 0.96, green: 0.77, blue: 0.09)   // #F5C518
   private static let kinopoiskOrange = Color(red: 1.0, green: 0.40, blue: 0.0) // #FF6600
 
+  @ViewBuilder
   public var body: some View {
-    HStack(spacing: 5) {
-      badge("IMDb", background: Self.imdbGold, foreground: .black)
-      score(imdbScore)
-      badge("КП", background: Self.kinopoiskOrange, foreground: .white)
-      score(kinopoiskScore)
+    if isEmpty {
+      // No real ratings — don't show the banner at all.
+      EmptyView()
+    } else {
+      HStack(spacing: 5) {
+        if hasImdb {
+          badge("IMDb", background: Self.imdbGold, foreground: .black)
+          score(imdbScore)
+        }
+        if hasKinopoisk {
+          badge("КП", background: Self.kinopoiskOrange, foreground: .white)
+          score(kinopoiskScore)
+        }
+      }
+      .padding(.horizontal, 10)
+      .padding(.vertical, 4)
+      .background(Color.KinoPub.selectionBackground)
+      .cornerRadius(8)
     }
-    .padding(.horizontal, 10)
-    .padding(.vertical, 4)
-    .background(Color.KinoPub.selectionBackground)
-    .cornerRadius(8)
-    .opacity(isEmpty ? 0 : 1)
   }
 
+  // A score of nil or 0 means "no rating" — hide that source.
+  private var hasImdb: Bool { (imdbScore ?? 0) > 0 }
+  private var hasKinopoisk: Bool { (kinopoiskScore ?? 0) > 0 }
+
   var isEmpty: Bool {
-    imdbScore == nil && kinopoiskScore == nil
+    !hasImdb && !hasKinopoisk
   }
 
   private func badge(_ text: String, background: Color, foreground: Color) -> some View {
