@@ -29,6 +29,13 @@ struct Sidebar: View {
       .listRowBackground(selection == .bookmarks ? Color.KinoPub.accent : Color.clear)
       .tint(Color.clear)
 
+      NavigationLink(value: NavigationTabs.watching) {
+        Label("Watching", systemImage: "play.tv")
+          .foregroundStyle(Color.white)
+      }
+      .listRowBackground(selection == .watching ? Color.KinoPub.accent : Color.clear)
+      .tint(Color.clear)
+
       NavigationLink(value: NavigationTabs.history) {
         Label("History", systemImage: "clock.arrow.circlepath")
           .foregroundStyle(Color.white)
