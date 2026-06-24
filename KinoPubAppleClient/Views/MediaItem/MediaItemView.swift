@@ -202,8 +202,10 @@ struct MediaItemView: View {
       // Watchlist ("Буду смотреть") is a serials-only feature on kino.pub; for movies use Bookmarks.
       if mediaItem.isSeries {
         watchlistButton
+      } else {
+        // Whole-item "watched" applies to movies; series are marked per-episode (long-press).
+        watchedButton
       }
-      watchedButton
       bookmarkMenu
       downloadButton
       if mediaItem.trailer?.url != nil {
@@ -227,7 +229,9 @@ struct MediaItemView: View {
   }
 
   private var watchedButton: some View {
-    circleIconButton("eye", accessibility: "Mark Watched") {
+    let watched = (mediaItem.videos?.first?.watched ?? 0) > 0
+    return circleIconButton(watched ? "eye.fill" : "eye",
+                            accessibility: watched ? "Mark as Unwatched" : "Mark as Watched") {
       itemModel.toggleWatched()
     }
   }
@@ -270,14 +274,14 @@ struct MediaItemView: View {
     let title = (hasResume ? "Continue" : (mediaItem.isSeries ? "Watch" : "Play")).localized
     if mediaItem.isSeries, let episode = seriesPlayEpisode {
       NavigationLink(value: itemModel.linkProvider.player(for: episode)) {
-        playLabel(title)
+        playLabel(title, subtitle: resumeSubtitle)
       }
       #if os(macOS)
       .buttonStyle(.plain)
       #endif
     } else {
       NavigationLink(value: itemModel.linkProvider.player(for: mediaItem)) {
-        playLabel(title)
+        playLabel(title, subtitle: resumeSubtitle)
       }
       #if os(macOS)
       .buttonStyle(.plain)
@@ -322,15 +326,44 @@ struct MediaItemView: View {
     return firstPlayableEpisode
   }
 
-  private func playLabel(_ title: String) -> some View {
-    HStack(spacing: 8) {
+  private func playLabel(_ title: String, subtitle: String? = nil) -> some View {
+    HStack(spacing: 10) {
       Image(systemName: "play.fill")
-      Text(title).font(.system(size: 16, weight: .semibold))
+      VStack(alignment: .leading, spacing: 1) {
+        Text(title).font(.system(size: 16, weight: .semibold))
+        if let subtitle {
+          Text(subtitle)
+            .font(.system(size: 11, weight: .medium))
+            .opacity(0.85)
+        }
+      }
     }
     .foregroundStyle(.white)
     .padding(.horizontal, 22)
-    .padding(.vertical, 12)
+    .padding(.vertical, subtitle == nil ? 12 : 8)
     .background(Capsule().fill(Color.KinoPub.accent))
+  }
+
+  /// Resume detail shown under "Continue": "S{n} · E{n} · {time}" for series, just time for movies.
+  private var resumeSubtitle: String? {
+    guard hasResume else { return nil }
+    if mediaItem.isSeries, let target = continueTarget {
+      let base = "S\(target.season.number) · E\(target.episode.number)"
+      let time = target.episode.watching.time
+      return time > 0 ? "\(base) · \(Self.resumeTime(time))" : base
+    }
+    if let time = mediaItem.videos?.first?.watching.time, time > 0 {
+      return Self.resumeTime(time)
+    }
+    return nil
+  }
+
+  private static func resumeTime(_ seconds: Int) -> String {
+    let formatter = DateComponentsFormatter()
+    formatter.allowedUnits = seconds >= 3600 ? [.hour, .minute, .second] : [.minute, .second]
+    formatter.unitsStyle = .positional
+    formatter.zeroFormattingBehavior = .pad
+    return formatter.string(from: TimeInterval(seconds)) ?? ""
   }
 
   private func circleIcon(_ systemName: String) -> some View {
