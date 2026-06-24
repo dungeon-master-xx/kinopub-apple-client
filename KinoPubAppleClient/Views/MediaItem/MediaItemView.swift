@@ -138,6 +138,12 @@ struct MediaItemView: View {
     if let ac3 = mediaItem.ac3, ac3 > 0 {
       items.append(.init(text: "AC3", isBadge: true))
     }
+    if let imdbRating = mediaItem.imdbRating, imdbRating > 0 {
+      items.append(.init(text: "IMDb \(String(format: "%.1f", imdbRating))", isBadge: false))
+    }
+    if let kinopoiskRating = mediaItem.kinopoiskRating, kinopoiskRating > 0 {
+      items.append(.init(text: "KP \(String(format: "%.1f", kinopoiskRating))", isBadge: false))
+    }
     return items
   }
 
@@ -157,7 +163,10 @@ struct MediaItemView: View {
   private var heroActions: some View {
     HStack(spacing: 12) {
       playButton
-      addMenu
+      watchlistButton
+      watchedButton
+      bookmarkMenu
+      downloadButton
       if mediaItem.trailer?.url != nil {
         NavigationLink(value: itemModel.linkProvider.trailerPlayer(for: mediaItem)) {
           circleIcon("film")
@@ -165,7 +174,48 @@ struct MediaItemView: View {
         #if os(macOS)
         .buttonStyle(.plain)
         #endif
+        .accessibilityLabel("Trailer")
       }
+    }
+  }
+
+  private var watchlistButton: some View {
+    let inWatchlist = mediaItem.inWatchlist == true
+    return circleIconButton(inWatchlist ? "checkmark" : "plus",
+                            accessibility: inWatchlist ? "Remove from Watchlist" : "Add to Watchlist") {
+      itemModel.toggleWatchlist()
+    }
+  }
+
+  private var watchedButton: some View {
+    circleIconButton("eye", accessibility: "Mark Watched") {
+      itemModel.toggleWatched()
+    }
+  }
+
+  @ViewBuilder
+  private var bookmarkMenu: some View {
+    if !itemModel.bookmarkFolders.isEmpty {
+      Menu {
+        ForEach(itemModel.bookmarkFolders) { folder in
+          Button(folder.title) {
+            itemModel.toggleBookmark(folderId: folder.id)
+          }
+        }
+      } label: {
+        circleIcon("folder")
+      }
+      #if os(macOS)
+      .menuStyle(.borderlessButton)
+      .fixedSize()
+      #endif
+      .accessibilityLabel("Add to Bookmark")
+    }
+  }
+
+  private var downloadButton: some View {
+    circleIconButton("arrow.down.to.line", accessibility: "Download") {
+      startDownloadFlow()
     }
   }
 
@@ -200,47 +250,24 @@ struct MediaItemView: View {
     .background(Capsule().fill(Color.KinoPub.accent))
   }
 
-  private var addMenu: some View {
-    Menu {
-      Button {
-        itemModel.toggleWatchlist()
-      } label: {
-        Label("Add to Watchlist", systemImage: "text.badge.plus")
-      }
-      Button {
-        itemModel.toggleWatched()
-      } label: {
-        Label("Mark Watched", systemImage: "eye")
-      }
-      if !itemModel.bookmarkFolders.isEmpty {
-        Menu("Add to Bookmark…") {
-          ForEach(itemModel.bookmarkFolders) { folder in
-            Button(folder.title) {
-              itemModel.toggleBookmark(folderId: folder.id)
-            }
-          }
-        }
-      }
-      Button {
-        startDownloadFlow()
-      } label: {
-        Label("Download", systemImage: "arrow.down.circle")
-      }
-    } label: {
-      circleIcon("plus")
-    }
-    #if os(macOS)
-    .menuStyle(.borderlessButton)
-    .fixedSize()
-    #endif
-  }
-
   private func circleIcon(_ systemName: String) -> some View {
     Image(systemName: systemName)
       .font(.system(size: 18, weight: .semibold))
       .foregroundStyle(.white)
-      .frame(width: 44, height: 44)
+      .frame(width: 50, height: 50)
       .background(Circle().fill(Color.white.opacity(0.18)))
+  }
+
+  private func circleIconButton(_ systemName: String,
+                                accessibility: String,
+                                action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      circleIcon(systemName)
+    }
+    #if os(macOS)
+    .buttonStyle(.plain)
+    #endif
+    .accessibilityLabel(accessibility)
   }
 
   private func startDownloadFlow() {
