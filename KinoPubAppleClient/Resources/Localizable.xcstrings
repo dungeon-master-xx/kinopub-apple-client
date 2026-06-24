@@ -1851,6 +1851,38 @@
         }
       }
     },
+    "Mark as Unwatched": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark as Unwatched"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отметить непросмотренной"
+          }
+        }
+      }
+    },
+    "Mark as Watched": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark as Watched"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отметить просмотренной"
+          }
+        }
+      }
+    },
     "New Episodes": {
       "localizations": {
         "en": {

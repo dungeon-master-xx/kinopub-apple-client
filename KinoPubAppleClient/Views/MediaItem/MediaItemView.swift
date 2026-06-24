@@ -317,6 +317,23 @@ struct MediaItemView: View {
                 .buttonStyle(.plain)
                 #endif
                 .id(episode.id)
+                .contextMenu {
+                  Button {
+                    itemModel.toggleEpisodeWatched(episodeNumber: episode.number, season: season.number)
+                  } label: {
+                    Label(episode.watched > 0 ? "Mark as Unwatched".localized : "Mark as Watched".localized,
+                          systemImage: episode.watched > 0 ? "checkmark.circle" : "circle")
+                  }
+                  Button {
+                    selectedDownloadableItem = DownloadableMediaItem(name: "S\(season.number)E\(episode.number)",
+                                                                     files: episode.files,
+                                                                     mediaItem: mediaItem,
+                                                                     watchingMetadata: WatchingMetadata(id: episode.id, video: episode.number, season: season.number))
+                    showDownloadPicker = true
+                  } label: {
+                    Label("Download".localized, systemImage: "arrow.down.circle")
+                  }
+                }
               }
             }
             .padding(.horizontal, 20)
