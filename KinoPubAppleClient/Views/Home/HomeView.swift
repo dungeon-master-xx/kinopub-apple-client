@@ -123,12 +123,12 @@ struct HomeView: View {
   @ViewBuilder
   private var continueWatchingShelf: some View {
     MediaShelf(title: "Continue Watching".localized) {
-      ForEach(model.continueWatching) { item in
-        NavigationLink(value: MainRoutes.details(item)) {
-          ContinueWatchingCard(imageURL: item.posters.wide ?? item.posters.big,
-                               title: item.localizedTitle,
-                               subtitle: item.duration.totalFormatted,
-                               progress: nil)
+      ForEach(model.continueWatching) { entry in
+        NavigationLink(value: MainRoutes.details(entry.item)) {
+          ContinueWatchingCard(imageURL: entry.item.posters.wide ?? entry.item.posters.big,
+                               title: entry.item.localizedTitle,
+                               subtitle: entry.subtitle,
+                               progress: entry.progress)
         }
 #if os(macOS)
         .buttonStyle(PlainButtonStyle())
