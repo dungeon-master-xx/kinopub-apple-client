@@ -23,8 +23,8 @@ class FilterModel: ObservableObject {
   @Published var mediaType: MediaType = .movie
 
   @Published var yearFilterEnabled: Bool = false
-  @Published var yearMin: Int = 1920
-  @Published var yearMax: Int = 2023
+  @Published var yearMin: Int = 1950
+  @Published var yearMax: Int = 2026
 
   @Published var imdbFilterEnabled: Bool = false
   @Published var imdbMin: Int = 0
@@ -61,8 +61,8 @@ class FilterModel: ObservableObject {
   func clear() {
     mediaType = .movie
     yearFilterEnabled = false
-    yearMin = 1920
-    yearMax = 2023
+    yearMin = 1950
+    yearMax = 2026
     imdbFilterEnabled = false
     imdbMin = 0
     imdbMax = 0
