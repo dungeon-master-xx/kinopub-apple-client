@@ -124,7 +124,9 @@ struct HomeView: View {
       ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
         NavigationLink(value: MainRoutes.details(item)) {
           PosterCard(imageURL: item.posters.medium,
-                     rank: shelf.ranked ? (index + 1) : nil)
+                     rank: shelf.ranked ? (index + 1) : nil,
+                     imdbRating: item.imdbRating,
+                     kinopoiskRating: item.kinopoiskRating)
         }
 #if os(macOS)
         .buttonStyle(PlainButtonStyle())

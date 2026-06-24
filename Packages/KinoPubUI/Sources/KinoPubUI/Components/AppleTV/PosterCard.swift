@@ -2,7 +2,7 @@
 //  PosterCard.swift
 //
 //
-//  Apple TV-style vertical poster card with optional Top-10 rank and caption.
+//  Apple TV-style vertical poster card with optional Top-10 rank, ratings and caption.
 //
 
 import SwiftUI
@@ -13,26 +13,34 @@ public struct PosterCard: View {
   private let title: String?
   private let subtitle: String?
   private let rank: Int?
+  private let imdbRating: Double?
+  private let kinopoiskRating: Double?
   private let width: CGFloat
   private let cornerRadius: CGFloat
-  private let showsAppleTVStyleRank: Bool
 
   public init(imageURL: String?,
               title: String? = nil,
               subtitle: String? = nil,
               rank: Int? = nil,
-              width: CGFloat = 130,
+              imdbRating: Double? = nil,
+              kinopoiskRating: Double? = nil,
+              width: CGFloat = 140,
               cornerRadius: CGFloat = 10) {
     self.imageURL = imageURL
     self.title = title
     self.subtitle = subtitle
     self.rank = rank
+    self.imdbRating = imdbRating
+    self.kinopoiskRating = kinopoiskRating
     self.width = width
     self.cornerRadius = cornerRadius
-    self.showsAppleTVStyleRank = rank != nil
   }
 
   private var height: CGFloat { width * 1.5 }
+
+  private var hasRatings: Bool {
+    (imdbRating ?? 0) > 0 || (kinopoiskRating ?? 0) > 0
+  }
 
   public var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -45,24 +53,26 @@ public struct PosterCard: View {
   }
 
   private var poster: some View {
-    ZStack(alignment: .topLeading) {
-      AsyncImage(url: URL(string: imageURL ?? "")) { image in
-        image
-          .resizable()
-          .renderingMode(.original)
-          .aspectRatio(contentMode: .fill)
-      } placeholder: {
-        Color.KinoPub.skeleton
+    AsyncImage(url: URL(string: imageURL ?? "")) { image in
+      image
+        .resizable()
+        .renderingMode(.original)
+        .aspectRatio(contentMode: .fill)
+    } placeholder: {
+      Color.KinoPub.skeleton
+    }
+    .frame(width: width, height: height)
+    .clipped()
+    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    .overlay(alignment: .bottom) {
+      if hasRatings {
+        ContentItemRatingView(imdbScore: imdbRating, kinopoiskScore: kinopoiskRating)
+          .scaleEffect(0.8, anchor: .bottom)
+          .padding(.bottom, 6)
       }
-      .frame(width: width, height: height)
-      .clipped()
-      .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-      .overlay(
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-          .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.5)
-      )
-
-      if let rank, showsAppleTVStyleRank {
+    }
+    .overlay(alignment: .topLeading) {
+      if let rank {
         Text("\(rank)")
           .font(.system(size: 40, weight: .heavy, design: .rounded))
           .foregroundStyle(.white)
