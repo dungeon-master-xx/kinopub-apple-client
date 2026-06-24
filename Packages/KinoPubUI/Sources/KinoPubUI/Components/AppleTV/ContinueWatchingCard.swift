@@ -101,6 +101,7 @@ public struct ContinueWatchingCard: View {
                          progress: 0.4,
                          width: width)
       .redacted(reason: .placeholder)
+      .opacity(0.45)
   }
 }
 

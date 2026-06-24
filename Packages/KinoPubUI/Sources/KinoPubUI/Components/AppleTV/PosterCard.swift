@@ -105,5 +105,6 @@ public struct PosterCard: View {
   public static func placeholder(width: CGFloat = 140) -> some View {
     PosterCard(imageURL: nil, title: "Placeholder", width: width)
       .redacted(reason: .placeholder)
+      .opacity(0.45)
   }
 }

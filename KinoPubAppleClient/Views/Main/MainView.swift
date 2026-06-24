@@ -113,6 +113,11 @@ struct MainView: View {
       .task {
         await catalog.fetchItems()
       }
+      // The deep-link filter is already captured by the catalog above; clear it so a later
+      // manual selection of this section isn't unexpectedly pre-filtered.
+      .onAppear {
+        navigationState.pendingCategoryFilter = nil
+      }
     }
   }
   

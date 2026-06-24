@@ -15,7 +15,11 @@ import SkeletonUI
 struct MediaItemView: View {
 
   @EnvironmentObject var errorHandler: ErrorHandler
+  @EnvironmentObject private var navigationState: NavigationState
   @Environment(\.appContext) private var appContext
+#if os(iOS)
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+#endif
   @StateObject private var itemModel: MediaItemModel
 
   @State private var plotExpanded: Bool = false
@@ -32,6 +36,34 @@ struct MediaItemView: View {
 
   private var mediaItem: MediaItem { itemModel.mediaItem }
   private var isSkeleton: Bool { !itemModel.itemLoaded }
+
+  /// True when the app uses the sidebar (iPad/macOS) so facets can deep-link into a section.
+  private var usesSidebarSections: Bool {
+#if os(macOS)
+    return true
+#else
+    return horizontalSizeClass == .regular
+#endif
+  }
+
+  /// A tappable facet (genre/country/year). On wide layouts it selects the matching Library
+  /// section in the sidebar and pre-filters it; on compact it pushes a filtered catalog.
+  @ViewBuilder
+  private func sectionFacet<Label: View>(filter: MediaItemsFilter,
+                                         route: (any Hashable)?,
+                                         @ViewBuilder label: () -> Label) -> some View {
+    if usesSidebarSections {
+      Button {
+        navigationState.pendingCategoryFilter = filter
+        navigationState.sidebarSelection = .category(filter.contentType)
+      } label: {
+        label()
+      }
+      .buttonStyle(.plain)
+    } else {
+      facetLink(route, label: label)
+    }
+  }
 
   /// Wraps `label` in a NavigationLink to `route` when one exists; otherwise
   /// renders the label as-is. Lets tappable metadata degrade gracefully on
@@ -549,7 +581,8 @@ struct MediaItemView: View {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 8) {
           ForEach(genres, id: \.id) { genre in
-            facetLink(itemModel.genreRoute(id: genre.id, title: genre.title ?? "")) {
+            sectionFacet(filter: itemModel.genreFilter(id: genre.id),
+                         route: itemModel.genreRoute(id: genre.id, title: genre.title ?? "")) {
               chip(genre.title?.uppercased() ?? "")
             }
           }
@@ -572,7 +605,13 @@ struct MediaItemView: View {
   // MARK: - Information & Languages
 
   private var infoSection: some View {
-    MediaItemInfoSection(mediaItem: mediaItem, itemModel: itemModel)
+    MediaItemInfoSection(mediaItem: mediaItem,
+                         itemModel: itemModel,
+                         usesSidebar: usesSidebarSections,
+                         openSection: { filter in
+                           navigationState.pendingCategoryFilter = filter
+                           navigationState.sidebarSelection = .category(filter.contentType)
+                         })
       .padding(.horizontal, 20)
   }
 }
@@ -586,6 +625,21 @@ private struct MediaItemInfoSection: View {
 
   let mediaItem: MediaItem
   @ObservedObject var itemModel: MediaItemModel
+  let usesSidebar: Bool
+  let openSection: (MediaItemsFilter) -> Void
+
+  /// A tappable facet that deep-links into a section (wide) or pushes a filtered catalog (compact).
+  @ViewBuilder
+  private func sectionFacet<Label: View>(filter: MediaItemsFilter,
+                                         route: (any Hashable)?,
+                                         @ViewBuilder label: () -> Label) -> some View {
+    if usesSidebar {
+      Button { openSection(filter) } label: { label() }
+        .buttonStyle(.plain)
+    } else {
+      facetLink(route, label: label)
+    }
+  }
 
   var body: some View {
     // Prefer a two-column layout, but fall back to a stacked layout when the
@@ -612,6 +666,7 @@ private struct MediaItemInfoSection: View {
       if mediaItem.year > 0 {
         facetRow(label: "Premiere".localized,
                  value: "\(mediaItem.year)",
+                 filter: itemModel.yearFilter(mediaItem.year),
                  route: itemModel.yearRoute(mediaItem.year))
       }
 
@@ -623,8 +678,9 @@ private struct MediaItemInfoSection: View {
           ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
               ForEach(Array(mediaItem.countries.enumerated()), id: \.offset) { _, country in
-                facetLink(itemModel.countryRoute(id: country.id, title: country.title)) {
-                  facetValueText(country.title, isLink: itemModel.countryRoute(id: country.id, title: country.title) != nil)
+                sectionFacet(filter: itemModel.countryFilter(id: country.id),
+                             route: itemModel.countryRoute(id: country.id, title: country.title)) {
+                  facetValueText(country.title, isLink: true)
                 }
               }
             }
@@ -698,13 +754,19 @@ private struct MediaItemInfoSection: View {
   /// An info row whose value is tappable (when a `route` exists) to open a
   /// filtered catalog (e.g. year).
   @ViewBuilder
-  private func facetRow(label: String, value: String, route: (any Hashable)?) -> some View {
+  private func facetRow(label: String, value: String, filter: MediaItemsFilter? = nil, route: (any Hashable)?) -> some View {
     VStack(alignment: .leading, spacing: 2) {
       Text(label.uppercased())
         .font(.system(size: 11, weight: .semibold))
         .foregroundStyle(Color.KinoPub.subtitle)
-      facetLink(route) {
-        facetValueText(value, isLink: route != nil)
+      if let filter {
+        sectionFacet(filter: filter, route: route) {
+          facetValueText(value, isLink: route != nil)
+        }
+      } else {
+        facetLink(route) {
+          facetValueText(value, isLink: route != nil)
+        }
       }
     }
   }
