@@ -27,6 +27,7 @@ extension EnvironmentValues {
 
 typealias AppContextProtocol = AuthorizationServiceProvider
 & VideoContentServiceProvider
+& CollectionsServiceProvider
 & ConfigurationProvider
 & KeychainStorageProvider
 & AccessTokenServiceProvider
@@ -44,6 +45,7 @@ struct AppContext: AppContextProtocol {
   var configuration: Configuration
   var authService: AuthorizationService
   var contentService: VideoContentService
+  var collectionsService: CollectionsService
   var accessTokenService: AccessTokenService
   var userService: UserService
   var keychainStorage: KeychainStorage
@@ -75,6 +77,7 @@ struct AppContext: AppContextProtocol {
     return AppContext(configuration: configuration,
                       authService: authService,
                       contentService: VideoContentServiceImpl(apiClient: apiClient),
+                      collectionsService: CollectionsServiceImpl(apiClient: apiClient),
                       accessTokenService: accessTokenService,
                       userService: UserServiceImpl(apiClient: apiClient),
                       keychainStorage: keychainStorage,
