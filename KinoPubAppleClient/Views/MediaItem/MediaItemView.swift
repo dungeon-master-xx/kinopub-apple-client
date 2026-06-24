@@ -25,11 +25,6 @@ struct MediaItemView: View {
   @State private var plotExpanded: Bool = false
   @State private var selectedSeasonNumber: Int?
 
-  // Download flow (mirrors the mechanism previously in MediaItemDescriptionCard).
-  @State private var selectedDownloadableItem: DownloadableMediaItem?
-  @State private var showDownloadPicker: Bool = false
-  @State private var showDownloadableItemPicker: Bool = false
-
   init(model: @autoclosure @escaping () -> MediaItemModel) {
     _itemModel = StateObject(wrappedValue: model())
   }
@@ -97,24 +92,6 @@ struct MediaItemView: View {
     .background(Color.KinoPub.background)
     // Let the hero cover bleed up under the (transparent) navigation bar.
     .ignoresSafeArea(edges: .top)
-    // Picker to select episode or entire media to download.
-    .confirmationDialog("", isPresented: $showDownloadableItemPicker, titleVisibility: .hidden) {
-      ForEach(mediaItem.downloadableItems) { item in
-        Button(item.name) {
-          selectedDownloadableItem = item
-          showDownloadPicker = true
-        }
-      }
-    }
-    // Picker to select the quality of the item to download.
-    .confirmationDialog("", isPresented: $showDownloadPicker, titleVisibility: .hidden) {
-      ForEach(selectedDownloadableItem?.files ?? []) { file in
-        Button(file.quality) {
-          guard let selectedDownloadableItem else { return }
-          itemModel.startDownload(item: selectedDownloadableItem, file: file)
-        }
-      }
-    }
     #if os(iOS)
     .toolbar(.hidden, for: .tabBar)
     .toolbarBackground(.hidden, for: .navigationBar)
@@ -273,9 +250,16 @@ struct MediaItemView: View {
   }
 
   private var downloadButton: some View {
-    circleIconButton("arrow.down.to.line", accessibility: "Download") {
-      startDownloadFlow()
+    Menu {
+      downloadMenu
+    } label: {
+      circleIcon("arrow.down.to.line")
     }
+    .menuIndicator(.hidden)
+#if os(macOS)
+    .menuStyle(.borderlessButton)
+#endif
+    .accessibilityLabel("Download")
   }
 
   @ViewBuilder
@@ -329,15 +313,45 @@ struct MediaItemView: View {
     .accessibilityLabel(accessibility)
   }
 
-  private func startDownloadFlow() {
-    if (mediaItem.seasons?.count ?? 0) > 0 {
-      showDownloadableItemPicker = true
+  // MARK: - Download menu (Season ▸ Episode ▸ Quality)
+
+  @ViewBuilder
+  private var downloadMenu: some View {
+    if mediaItem.isSeries, let seasons = mediaItem.seasons, !seasons.isEmpty {
+      ForEach(seasons, id: \.number) { season in
+        Menu("\("Season".localized) \(season.number)") {
+          ForEach(season.episodes, id: \.id) { episode in
+            Menu("S\(season.number)E\(episode.number)") {
+              qualityButtons(for: episodeDownloadable(episode, in: season))
+            }
+          }
+        }
+      }
     } else {
-      selectedDownloadableItem = DownloadableMediaItem(name: mediaItem.title,
-                                                       files: mediaItem.files,
-                                                       mediaItem: mediaItem,
-                                                       watchingMetadata: WatchingMetadata(id: mediaItem.id, video: nil, season: nil))
-      showDownloadPicker = true
+      qualityButtons(for: movieDownloadable)
+    }
+  }
+
+  private var movieDownloadable: DownloadableMediaItem {
+    DownloadableMediaItem(name: mediaItem.title,
+                          files: mediaItem.files,
+                          mediaItem: mediaItem,
+                          watchingMetadata: WatchingMetadata(id: mediaItem.id, video: nil, season: nil))
+  }
+
+  private func episodeDownloadable(_ episode: Episode, in season: Season) -> DownloadableMediaItem {
+    DownloadableMediaItem(name: "S\(season.number)E\(episode.number)",
+                          files: episode.files,
+                          mediaItem: mediaItem,
+                          watchingMetadata: WatchingMetadata(id: episode.id, video: episode.number, season: season.number))
+  }
+
+  @ViewBuilder
+  private func qualityButtons(for item: DownloadableMediaItem) -> some View {
+    ForEach(item.files) { file in
+      Button(file.quality) {
+        itemModel.startDownload(item: item, file: file)
+      }
     }
   }
 
@@ -379,12 +393,8 @@ struct MediaItemView: View {
                     Label(episode.watched > 0 ? "Mark as Unwatched".localized : "Mark as Watched".localized,
                           systemImage: episode.watched > 0 ? "checkmark.circle" : "circle")
                   }
-                  Button {
-                    selectedDownloadableItem = DownloadableMediaItem(name: "S\(season.number)E\(episode.number)",
-                                                                     files: episode.files,
-                                                                     mediaItem: mediaItem,
-                                                                     watchingMetadata: WatchingMetadata(id: episode.id, video: episode.number, season: season.number))
-                    showDownloadPicker = true
+                  Menu {
+                    qualityButtons(for: episodeDownloadable(episode, in: season))
                   } label: {
                     Label("Download".localized, systemImage: "arrow.down.circle")
                   }

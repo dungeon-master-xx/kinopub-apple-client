@@ -27,7 +27,9 @@ final class UserActionsServiceImpl: UserActionsService {
   }
   
   func toggleWatching(id: Int, video: Int?, season: Int?) async throws {
-    let request = ToggleWatchingRequest(id: id, video: video ?? 0, season: season)
+    // For a movie the API requires `video` to be OMITTED (not 0). The request drops -1, so a
+    // nil video maps to -1 to be left out; episodes pass an explicit 1-based number.
+    let request = ToggleWatchingRequest(id: id, video: video ?? -1, season: season)
     _ = try await apiClient.performRequest(with: request, decodingType: ToggleWatchingResponse.self)
   }
 
