@@ -33,6 +33,7 @@ struct Sidebar: View {
           row(.category(type))
         }
         row(.sport)
+        row(.collections)
       }
 
       Section("Other".localized) {
