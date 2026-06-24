@@ -18,7 +18,9 @@ struct FilterView: View {
   private let onApply: (MediaItemsFilter) -> Void
   private let onClear: () -> Void
 
-  init(model: @autoclosure @escaping () -> FilterModel,
+  private let yearRange = Array(1950...2026)
+
+  init(model: @autoclosure @escaping () -> FilterModel = FilterModel(),
        onApply: @escaping (MediaItemsFilter) -> Void = { _ in },
        onClear: @escaping () -> Void = {}) {
     _model = StateObject(wrappedValue: model())
@@ -27,75 +29,88 @@ struct FilterView: View {
   }
 
   var body: some View {
-//    NavigationView {
-    VStack {
-      HStack {
-        Spacer()
-        Form {
-          typePicker
-          yearSection
-          imdbRatingSection
+    NavigationStack {
+      Form {
+        typeSection
+        yearSection
+        imdbRatingSection
+      }
+      .formStyle(.grouped)
+      .scrollContentBackground(.hidden)
+      .background(Color.KinoPub.background)
+      .navigationTitle("Filter".localized)
+      #if os(iOS)
+      .navigationBarTitleDisplayMode(.inline)
+      #endif
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Clear".localized, role: .destructive) {
+            model.clear()
+            onClear()
+            dismiss()
+          }
+        }
+        ToolbarItem(placement: .confirmationAction) {
+          Button("Apply".localized) {
+            onApply(model.makeFilter())
+            dismiss()
+          }
         }
       }
-      HStack {
-        KinoPubButton(title: "Clear".localized, color: .red) {
-          model.clear()
-          onClear()
-          dismiss()
-        }
-        .frame(width: 120, height: 30)
-        KinoPubButton(title: "Apply".localized, color: .green) {
-          onApply(model.makeFilter())
-          dismiss()
-        }
-        .frame(width: 120, height: 30)
-      }
-      .padding()
     }
-    .padding()
-      
-      
-//    }
-    .navigationTitle("Filter")
-    #if os(iOS)
-    .navigationBarTitleDisplayMode(.inline)
-    #endif
+    .presentationDetents([.medium, .large])
   }
 
-  var typePicker: some View {
-    Picker("Type", selection: $model.mediaType) {
-      ForEach(MediaType.allCases) { type in
-        Text(type.title.localized)
-          .tag(type)
+  var typeSection: some View {
+    Section {
+      Picker("Type".localized, selection: $model.mediaType) {
+        ForEach(MediaType.allCases) { type in
+          Text(type.title.localized)
+            .tag(type)
+        }
       }
+      .pickerStyle(.menu)
     }
   }
-  
+
   var yearSection: some View {
     Section {
-      Toggle("Release Year", isOn: $model.yearFilterEnabled)
+      Toggle("Release Year".localized, isOn: $model.yearFilterEnabled)
       if model.yearFilterEnabled {
-        numberPicker(title: "From", from: 1920, to: 2023, currentValue: $model.yearMin)
-        numberPicker(title: "To", from: 1920, to: 2023, currentValue: $model.yearMax)
+        yearPicker(title: "From".localized, selection: $model.yearMin)
+        yearPicker(title: "To".localized, selection: $model.yearMax)
       }
     }
   }
 
   var imdbRatingSection: some View {
     Section {
-      Toggle("IMDB Rating", isOn: $model.imdbFilterEnabled)
+      Toggle("IMDB Rating".localized, isOn: $model.imdbFilterEnabled)
       if model.imdbFilterEnabled {
-        numberPicker(title: "From", from: 0, to: 10, currentValue: $model.imdbMin)
-        numberPicker(title: "To", from: 0, to: 10, currentValue: $model.imdbMax)
+        Stepper(value: $model.imdbMin, in: 0...10) {
+          HStack {
+            Text("From".localized)
+            Spacer()
+            Text("\(model.imdbMin)")
+              .foregroundStyle(.secondary)
+          }
+        }
       }
     }
   }
 
-  func numberPicker(title: String, from: Int, to: Int, currentValue: Binding<Int>) -> some View {
-    Picker(title, selection: currentValue) {
-      ForEach(from..<to+1) {
-        Text("\($0)").tag($0)
+  func yearPicker(title: String, selection: Binding<Int>) -> some View {
+    Picker(title, selection: selection) {
+      ForEach(yearRange, id: \.self) { year in
+        Text(verbatim: "\(year)").tag(year)
       }
     }
+    .pickerStyle(.menu)
+  }
+}
+
+struct FilterView_Previews: PreviewProvider {
+  static var previews: some View {
+    FilterView(model: FilterModel(), onApply: { _ in }, onClear: {})
   }
 }
