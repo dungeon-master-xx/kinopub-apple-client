@@ -138,7 +138,7 @@ struct WatchingSerialView: View {
   }
 
   var image: some View {
-    AsyncImage(url: URL(string: serial.posters.medium)) { image in
+    CachedAsyncImage(url: URL(string: serial.posters.medium)) { image in
       image
         .resizable()
         .renderingMode(.original)
