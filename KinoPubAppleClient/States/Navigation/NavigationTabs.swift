@@ -48,7 +48,7 @@ enum SidebarItem: Hashable, Identifiable {
 
   // Library categories shown in the sidebar, ordered like the website.
   static let libraryCategories: [MediaType] = [
-    .movie, .serial, .threeD, .concert, .documovie, .docuserial, .tvshow
+    .movie, .serial, .concert, .documovie, .docuserial, .tvshow
   ]
 
   var title: String {
