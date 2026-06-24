@@ -32,6 +32,7 @@ struct Sidebar: View {
         ForEach(SidebarItem.libraryCategories, id: \.self) { type in
           row(.category(type))
         }
+        row(.sport)
       }
 
       Section("Other".localized) {
