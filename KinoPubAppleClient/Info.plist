@@ -8,5 +8,9 @@
 	<string>xbmc</string>
 	<key>ClientSecret</key>
 	<string>cgg3gtifu46urtfp2zp1nqtba0k2ezxh</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 </dict>
 </plist>

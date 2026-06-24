@@ -47,6 +47,8 @@ struct MediaItemView: View {
       .frame(maxWidth: .infinity, alignment: .leading)
     }
     .background(Color.KinoPub.background)
+    // Let the hero cover bleed up under the (transparent) navigation bar.
+    .ignoresSafeArea(edges: .top)
     // Picker to select episode or entire media to download.
     .confirmationDialog("", isPresented: $showDownloadableItemPicker, titleVisibility: .hidden) {
       ForEach(mediaItem.downloadableItems) { item in
@@ -67,6 +69,8 @@ struct MediaItemView: View {
     }
     #if os(iOS)
     .toolbar(.hidden, for: .tabBar)
+    .toolbarBackground(.hidden, for: .navigationBar)
+    .toolbarColorScheme(.dark, for: .navigationBar)
     #endif
     .task {
       itemModel.fetchData()

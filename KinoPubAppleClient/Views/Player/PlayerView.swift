@@ -10,21 +10,21 @@ import SwiftUI
 import AVKit
 
 struct PlayerView: View {
-  
+
   @StateObject private var playerManager: PlayerManager
-  @State private var hideNavigationBar = false
+  @State private var hideControls = false
   @Environment(\.dismiss) private var dismiss
   @EnvironmentObject var navigationState: NavigationState
-  
+
   init(manager: @autoclosure @escaping () -> PlayerManager) {
     _playerManager = StateObject(wrappedValue: manager())
   }
-  
+
   var body: some View {
     GeometryReader { _ in
-      ZStack(alignment: .top) {
+      ZStack(alignment: .topLeading) {
         videoPlayer
-        backButton
+        closeButton
         if let continueTime = playerManager.continueTime {
           continueWatching(to: continueTime)
         }
@@ -42,10 +42,11 @@ struct PlayerView: View {
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .tabBar)
     .onChange(of: playerManager.isPlaying) { isPlaying in
-      hideNavigationBar = isPlaying
+      hideControls = isPlaying
     }
     .onAppear(perform: {
       UIApplication.shared.isIdleTimerDisabled = true
+      configureAudioSession()
       UIDevice.current.setValue(UIInterfaceOrientation.landscapeLeft.rawValue, forKey: "orientation")
       AppDelegate.orientationLock = .landscape
       toggleSidebar()
@@ -61,34 +62,52 @@ struct PlayerView: View {
     })
 #endif
   }
-  
+
+  @ViewBuilder
   var videoPlayer: some View {
+#if os(iOS)
+    // AVPlayerViewController provides the native transport controls, AirPlay and the
+    // Picture-in-Picture button (which SwiftUI's VideoPlayer does not expose).
+    SystemVideoPlayer(player: playerManager.player)
+      .onAppear { playerManager.player.play() }
+#else
     VideoPlayer(player: playerManager.player)
-      .onAppear(perform: {
-        playerManager.player.play()
-      })
+      .onAppear { playerManager.player.play() }
+#endif
   }
-  
-  var backButton: some View {
+
+  // A native-style circular close control instead of a bare back chevron.
+  var closeButton: some View {
     HStack(alignment: .top) {
       Button(action: { dismiss() }, label: {
-        Image(systemName: "chevron.backward")
-          .font(.system(size: 24))
-          .tint(Color.KinoPub.accent)
+        Image(systemName: "xmark")
+          .font(.system(size: 16, weight: .bold))
+          .foregroundStyle(.white)
+          .frame(width: 36, height: 36)
+          .background(.ultraThinMaterial, in: Circle())
       })
 #if os(macOS)
       .buttonStyle(PlainButtonStyle())
 #endif
-      .frame(width: 70, height: 70)
-      .padding(.leading, 32)
+      .padding(.leading, 20)
       .padding(.top, 16)
       .contentShape(Rectangle())
+      .accessibilityLabel("Close")
       Spacer()
     }
     .fixedSize(horizontal: false, vertical: true)
-    .opacity(hideNavigationBar ? 0.0 : 1.0)
+    .opacity(hideControls ? 0.0 : 1.0)
+    .animation(.easeInOut(duration: 0.2), value: hideControls)
   }
-  
+
+#if os(iOS)
+  private func configureAudioSession() {
+    let session = AVAudioSession.sharedInstance()
+    try? session.setCategory(.playback, mode: .moviePlayback)
+    try? session.setActive(true)
+  }
+#endif
+
   func continueWatching(to continueTime: TimeInterval) -> some View {
     VStack(alignment: .center) {
       Spacer()
@@ -100,10 +119,34 @@ struct PlayerView: View {
       .frame(width: 180, height: 50)
       .padding(.bottom, 50)
     }
-    
+    .frame(maxWidth: .infinity)
   }
-  
+
   private func toggleSidebar() {
     navigationState.columnVisibility = .detailOnly
   }
 }
+
+#if os(iOS)
+/// Wraps `AVPlayerViewController` so we get the native playback chrome including
+/// the Picture-in-Picture button.
+private struct SystemVideoPlayer: UIViewControllerRepresentable {
+  let player: AVPlayer
+
+  func makeUIViewController(context: Context) -> AVPlayerViewController {
+    let controller = AVPlayerViewController()
+    controller.player = player
+    controller.allowsPictureInPicturePlayback = true
+    controller.canStartPictureInPictureAutomaticallyFromInline = true
+    controller.videoGravity = .resizeAspect
+    controller.showsPlaybackControls = true
+    return controller
+  }
+
+  func updateUIViewController(_ controller: AVPlayerViewController, context: Context) {
+    if controller.player !== player {
+      controller.player = player
+    }
+  }
+}
+#endif
