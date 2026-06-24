@@ -28,7 +28,14 @@ struct Sidebar: View {
       }
       .listRowBackground(selection == .bookmarks ? Color.KinoPub.accent : Color.clear)
       .tint(Color.clear)
-      
+
+      NavigationLink(value: NavigationTabs.history) {
+        Label("History", systemImage: "clock.arrow.circlepath")
+          .foregroundStyle(Color.white)
+      }
+      .listRowBackground(selection == .history ? Color.KinoPub.accent : Color.clear)
+      .tint(Color.clear)
+
       NavigationLink(value: NavigationTabs.downloads) {
         Label("Downloads", systemImage: "arrow.down.circle")
           .foregroundStyle(Color.white)

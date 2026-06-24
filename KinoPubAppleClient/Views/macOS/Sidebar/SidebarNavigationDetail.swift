@@ -23,6 +23,8 @@ struct SidebarNavigationDetail: View {
       main
     case .bookmarks:
       bookmarks
+    case .history:
+      history
     case .downloads:
       downloads
     case .profile:
@@ -42,6 +44,12 @@ struct SidebarNavigationDetail: View {
                                             errorHandler: errorHandler))
   }
   
+  var history: some View {
+    HistoryView(catalog: HistoryModel(itemsService: appContext.contentService,
+                                      authState: authState,
+                                      errorHandler: errorHandler))
+  }
+
   var downloads: some View {
     DownloadsView(catalog: DownloadsCatalog(downloadsDatabase: appContext.downloadedFilesDatabase, downloadManager: appContext.downloadManager))
   }
