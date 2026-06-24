@@ -25,7 +25,13 @@ class PlayerManager: ObservableObject {
   @Published var watchMark: WatchData?
   @Published var continueTime: TimeInterval?
   
-  lazy var player = AVPlayer(url: fileURL)
+  lazy var player: AVPlayer = {
+    if let fileURL {
+      return AVPlayer(url: fileURL)
+    } else {
+      return AVPlayer()
+    }
+  }()
   private var playerTimeObserver: PlayerTimeObserver?
   private var playItem: any PlayableItem
   private var watchMode: WatchMode
@@ -33,16 +39,20 @@ class PlayerManager: ObservableObject {
   private var rateObservation: NSKeyValueObservation?
   private var actionsService: UserActionsService
   
-  private var fileURL: URL {
+  private var fileURL: URL? {
     switch watchMode {
     case .media:
       let downloadedFiles = downloadedFilesDatabase.readData()
       if let file = downloadedFiles?.filter({ $0.metadata.id == playItem.id }).first {
         return file.localFileURL
       }
-      return URL(string: BestVideoQualityFinder.findBestURL(for: playItem.files))!
+      let urlString = BestVideoQualityFinder.findBestURL(for: playItem.files)
+      guard !urlString.isEmpty, let url = URL(string: urlString) else { return nil }
+      return url
     case .trailer:
-      return URL(string: playItem.trailer?.url ?? "")!
+      guard let urlString = playItem.trailer?.url, !urlString.isEmpty,
+            let url = URL(string: urlString) else { return nil }
+      return url
     }
   }
   
@@ -68,11 +78,12 @@ class PlayerManager: ObservableObject {
   // MARK: - Watch marks
   
   func saveWatchMark(time: TimeInterval) {
-    Task.detached(priority: .utility) { [unowned self] in
+    Task.detached(priority: .utility) { [weak self] in
+      guard let self else { return }
       do {
-        try await self.actionsService.markWatch(id: playItem.metadata.id, 
-                                                time: Int(time), video: playItem.metadata.video,
-                                                season: playItem.metadata.season)
+        try await self.actionsService.markWatch(id: self.playItem.metadata.id,
+                                                time: Int(time), video: self.playItem.metadata.video,
+                                                season: self.playItem.metadata.season)
       } catch {
         Logger.app.error("Failed to save watch mark: \(error)")
       }
