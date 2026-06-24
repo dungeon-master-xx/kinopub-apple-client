@@ -94,7 +94,10 @@ struct MediaItemView: View {
     }
     // Cache artwork/title locally so a started title can resume in Continue Watching.
     .onChange(of: itemModel.itemLoaded) { loaded in
-      if loaded { appContext.localProgressStore.cacheItem(itemModel.mediaItem) }
+      if loaded {
+        appContext.localProgressStore.cacheItem(itemModel.mediaItem)
+        Task { await itemModel.loadCastPhotos() }
+      }
     }
     .handleError(state: $errorHandler.state)
   }
@@ -110,15 +113,15 @@ struct MediaItemView: View {
           .skeleton(enabled: isSkeleton, size: CGSize(width: 240, height: 36))
 
         Text(genreLine)
-          .font(.system(size: 15, weight: .medium))
-          .foregroundStyle(.white.opacity(0.85))
+          .font(.system(size: 15, weight: .semibold))
+          .foregroundStyle(.white)
           .skeleton(enabled: isSkeleton, size: CGSize(width: 180, height: 16))
 
         if !mediaItem.plot.isEmpty {
           VStack(alignment: .leading, spacing: 4) {
             Text(mediaItem.plot)
               .font(.system(size: 14))
-              .foregroundStyle(.white.opacity(0.85))
+              .foregroundStyle(.white.opacity(0.95))
               .lineLimit(plotExpanded ? nil : 2)
               .multilineTextAlignment(.leading)
             Button(plotExpanded ? "Свернуть" : "ЕЩЕ") {
@@ -498,12 +501,14 @@ struct MediaItemView: View {
       MediaShelf(title: "Cast & Crew".localized, showsChevron: false) {
         ForEach(directors, id: \.self) { name in
           facetLink(itemModel.directorRoute(name)) {
-            CastAvatarView(name: name, role: "Director".localized)
+            CastAvatarView(imageURL: itemModel.personImages[name]?.absoluteString,
+                           name: name, role: "Director".localized)
           }
         }
         ForEach(actors, id: \.self) { name in
           facetLink(itemModel.actorRoute(name)) {
-            CastAvatarView(name: name, role: "Actor".localized)
+            CastAvatarView(imageURL: itemModel.personImages[name]?.absoluteString,
+                           name: name, role: "Actor".localized)
           }
         }
       }

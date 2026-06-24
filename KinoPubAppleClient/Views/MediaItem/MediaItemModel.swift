@@ -25,6 +25,10 @@ class MediaItemModel: ObservableObject {
   @Published public var itemLoaded: Bool = false
   @Published public var bookmarkFolders: [Bookmark] = []
   @Published public var relatedItems: [MediaItem] = []
+  /// Resolved cast/crew portrait URLs (by name) from TMDB.
+  @Published public var personImages: [String: URL] = [:]
+
+  private let tmdbService: TMDBService = AppContext.shared.tmdbService
 
   /// Actor names parsed from the comma-separated `cast` field (trimmed, non-empty).
   public var castNames: [String] {
@@ -40,6 +44,19 @@ class MediaItemModel: ObservableObject {
       .split(separator: ",")
       .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
       .filter { !$0.isEmpty }
+  }
+
+  /// Resolve TMDB portraits for the visible cast & crew (best-effort, cached).
+  func loadCastPhotos() async {
+    let names = Array(Set(castNames.prefix(12)).union(directorNames))
+    await withTaskGroup(of: (String, URL?).self) { group in
+      for name in names where personImages[name] == nil {
+        group.addTask { [tmdbService] in (name, await tmdbService.personImageURL(for: name)) }
+      }
+      for await (name, url) in group {
+        if let url { personImages[name] = url }
+      }
+    }
   }
 
   /// The content type to use for facet filters opened from this item, so a

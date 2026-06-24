@@ -16,6 +16,9 @@ struct HomeView: View {
   @Environment(\.appContext) var appContext
   @StateObject private var model: HomeModel
 
+  @State private var heroIndex: Int = 0
+  private let heroTimer = Timer.publish(every: 6, on: .main, in: .common).autoconnect()
+
   init(model: @autoclosure @escaping () -> HomeModel) {
     _model = StateObject(wrappedValue: model())
   }
@@ -35,7 +38,14 @@ struct HomeView: View {
         .padding(.bottom, 24)
       }
       .background(Color.KinoPub.background)
+      // Let the hero artwork bleed up under the (transparent) navigation bar.
+      .ignoresSafeArea(edges: .top)
       .navigationTitle("Home")
+      #if os(iOS)
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbarBackground(.hidden, for: .navigationBar)
+      .toolbarColorScheme(.dark, for: .navigationBar)
+      #endif
       .task {
         await model.fetchData()
       }
@@ -90,11 +100,17 @@ struct HomeView: View {
       HeroBackdrop(imageURL: nil, height: heroHeight) { EmptyView() }
     } else {
 #if os(iOS)
-      TabView {
-        ForEach(model.featured) { heroPage($0) }
+      TabView(selection: $heroIndex) {
+        ForEach(Array(model.featured.enumerated()), id: \.element.id) { index, item in
+          heroPage(item).tag(index)
+        }
       }
       .tabViewStyle(.page(indexDisplayMode: .always))
       .frame(height: heroHeight)
+      .onReceive(heroTimer) { _ in
+        guard model.featured.count > 1 else { return }
+        withAnimation { heroIndex = (heroIndex + 1) % model.featured.count }
+      }
 #else
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 16) {

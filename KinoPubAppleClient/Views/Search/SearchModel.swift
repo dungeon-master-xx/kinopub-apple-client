@@ -152,8 +152,9 @@ class SearchModel: ObservableObject {
     do {
       genres = try await contentService.fetchGenres()
     } catch {
+      // Browse genres are supplementary (cards fall back to a gradient), so a failure here
+      // must not throw a backend-error banner over the search screen on open.
       Logger.app.debug("fetch genres error: \(error)")
-      errorHandler.setError(error)
     }
     browseLoading = false
     // Genres render immediately; representative posters fill in asynchronously.

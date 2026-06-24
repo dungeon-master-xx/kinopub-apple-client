@@ -41,10 +41,11 @@ public struct HeroBackdrop<Overlay: View>: View {
       }
       .overlay {
         // Frosted blur over the lower portion so overlay text never mixes with busy artwork.
+        // Cover roughly the bottom two-thirds so longer titles/metadata stay readable.
         Rectangle()
           .fill(.ultraThinMaterial)
           .mask(
-            LinearGradient(colors: [.clear, .clear, .black],
+            LinearGradient(colors: [.clear, .black, .black],
                            startPoint: .top,
                            endPoint: .bottom)
           )
