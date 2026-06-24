@@ -34,6 +34,56 @@ class MediaItemModel: ObservableObject {
       .filter { !$0.isEmpty }
   }
 
+  /// Director names parsed from the comma-separated `director` field.
+  public var directorNames: [String] {
+    mediaItem.director
+      .split(separator: ",")
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+  }
+
+  /// The content type to use for facet filters opened from this item, so a
+  /// serial's genre opens serials and a movie's opens movies.
+  private var facetContentType: MediaType {
+    MediaType(rawValue: mediaItem.type) ?? .movie
+  }
+
+  private func facetFilter(genres: [Int] = [], countries: [Int] = [], year: String? = nil) -> MediaItemsFilter {
+    MediaItemsFilter(contentType: facetContentType,
+                     genres: genres,
+                     countries: countries,
+                     year: year,
+                     age: nil,
+                     sort: nil)
+  }
+
+  // MARK: - Tappable metadata routes
+
+  /// Route to a catalog filtered by a single genre.
+  func genreRoute(id: Int, title: String) -> (any Hashable)? {
+    linkProvider.filteredCatalog(filter: facetFilter(genres: [id]), title: title)
+  }
+
+  /// Route to a catalog filtered by a single country.
+  func countryRoute(id: Int, title: String) -> (any Hashable)? {
+    linkProvider.filteredCatalog(filter: facetFilter(countries: [id]), title: title)
+  }
+
+  /// Route to a catalog filtered by a single year.
+  func yearRoute(_ year: Int) -> (any Hashable)? {
+    linkProvider.filteredCatalog(filter: facetFilter(year: "\(year)"), title: "\(year)")
+  }
+
+  /// Route to a person search for an actor (kino.pub `field=cast`).
+  func actorRoute(_ name: String) -> (any Hashable)? {
+    linkProvider.personSearch(query: name, field: "cast", title: name)
+  }
+
+  /// Route to a person search for a director (kino.pub `field=director`).
+  func directorRoute(_ name: String) -> (any Hashable)? {
+    linkProvider.personSearch(query: name, field: "director", title: name)
+  }
+
   init(mediaItemId: Int,
        itemsService: VideoContentService,
        downloadManager: DownloadManager<DownloadMeta>,
@@ -76,6 +126,7 @@ class MediaItemModel: ObservableObject {
                                       genres: genres,
                                       countries: [],
                                       year: nil,
+                                      age: nil,
                                       sort: nil)
         let response = try await itemsService.filter(filter: filter, page: nil)
         relatedItems = response.items
