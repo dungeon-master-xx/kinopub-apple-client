@@ -14,13 +14,26 @@ struct SportView: View {
   @EnvironmentObject var authState: AuthState
   @EnvironmentObject var errorHandler: ErrorHandler
   @Environment(\.appContext) var appContext
+#if os(iOS)
+  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+#endif
   @StateObject private var model: SportModel
+  @State private var selectedChannel: TVChannel?
 
-  // ~3 wide columns on iPad, fewer on iPhone.
-  private let columns = [GridItem(.adaptive(minimum: 280), spacing: 16, alignment: .top)]
+  // Compact (iPhone) grid — small tiles, ~2× more per row than the old layout.
+  private let gridColumns = [GridItem(.adaptive(minimum: 140), spacing: 14, alignment: .top)]
 
   init(model: @autoclosure @escaping () -> SportModel) {
     _model = StateObject(wrappedValue: model())
+  }
+
+  /// Wide screens (iPad / macOS) get a master list + inline player; iPhone gets a grid.
+  private var isWide: Bool {
+#if os(macOS)
+    return true
+#else
+    return horizontalSizeClass == .regular
+#endif
   }
 
   var body: some View {
@@ -43,29 +56,97 @@ struct SportView: View {
   @ViewBuilder
   private var content: some View {
     if model.isLoading {
+      loading
+    } else if model.channels.isEmpty {
+      emptyState
+    } else if isWide {
+      wideLayout
+    } else {
+      compactGrid
+    }
+  }
+
+  // MARK: - Compact (iPhone): smaller grid, tap opens the modal player
+
+  private var compactGrid: some View {
+    ScrollView {
+      LazyVGrid(columns: gridColumns, spacing: 16) {
+        ForEach(model.channels) { channel in
+          NavigationLink(value: channel) {
+            LiveChannelCard(channel: channel)
+          }
+        }
+      }
+      .padding(16)
+    }
+  }
+
+  // MARK: - Wide (iPad / macOS): channel list + inline 16:9 player
+
+  private var wideLayout: some View {
+    HStack(spacing: 0) {
+      channelList
+        .frame(width: 320)
+      Divider()
+      playerPane
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    .onAppear {
+      if selectedChannel == nil { selectedChannel = model.channels.first }
+    }
+  }
+
+  private var channelList: some View {
+    ScrollView {
+      LazyVStack(spacing: 4) {
+        ForEach(model.channels) { channel in
+          Button {
+            selectedChannel = channel
+          } label: {
+            ChannelRow(channel: channel, isSelected: channel.id == selectedChannel?.id)
+          }
+          .buttonStyle(.plain)
+        }
+      }
+      .padding(12)
+    }
+  }
+
+  @ViewBuilder
+  private var playerPane: some View {
+    if let channel = selectedChannel, let url = URL(string: channel.stream) {
+      VStack(alignment: .leading, spacing: 16) {
+        InlinePlayerView(url: url)
+          .id(channel.id)
+          .frame(maxWidth: 900)
+        Text(channel.title)
+          .font(.system(size: 22, weight: .bold))
+          .foregroundStyle(Color.KinoPub.text)
+        Spacer()
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(20)
+    } else {
       VStack {
         Spacer()
-        ProgressView().tint(Color.KinoPub.accent)
+        Image(systemName: "play.tv")
+          .font(.system(size: 44))
+          .foregroundStyle(Color.KinoPub.subtitle)
         Spacer()
       }
       .frame(maxWidth: .infinity)
-    } else if model.channels.isEmpty {
-      emptyState
-    } else {
-      ScrollView {
-        LazyVGrid(columns: columns, spacing: 16) {
-          ForEach(model.channels) { channel in
-            NavigationLink(value: channel) {
-              LiveChannelCard(channel: channel)
-            }
-            #if os(macOS)
-            .buttonStyle(.plain)
-            #endif
-          }
-        }
-        .padding(20)
-      }
     }
+  }
+
+  // MARK: - States
+
+  private var loading: some View {
+    VStack {
+      Spacer()
+      ProgressView().tint(Color.KinoPub.accent)
+      Spacer()
+    }
+    .frame(maxWidth: .infinity)
   }
 
   private var emptyState: some View {
@@ -84,60 +165,72 @@ struct SportView: View {
   }
 }
 
-/// Apple TV-style live channel card: artwork/logo, a red LIVE badge, channel title.
+/// Compact tile for the iPhone grid: channel logo + title.
 struct LiveChannelCard: View {
   let channel: TVChannel
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      ZStack(alignment: .topLeading) {
-        artwork
-        liveBadge
-          .padding(8)
-      }
+    VStack(alignment: .leading, spacing: 6) {
+      ChannelArtwork(logo: channel.logo)
+        .aspectRatio(16.0 / 9.0, contentMode: .fit)
+        .frame(maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+          RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
       Text(channel.title)
-        .font(.system(size: 15, weight: .semibold))
+        .font(.system(size: 13, weight: .semibold))
         .foregroundStyle(Color.KinoPub.text)
         .lineLimit(1)
     }
   }
+}
 
-  private var artwork: some View {
+/// A row in the wide-screen channel list.
+struct ChannelRow: View {
+  let channel: TVChannel
+  let isSelected: Bool
+
+  var body: some View {
+    HStack(spacing: 12) {
+      ChannelArtwork(logo: channel.logo)
+        .frame(width: 72, height: 40)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+      Text(channel.title)
+        .font(.system(size: 15, weight: .medium))
+        .foregroundStyle(Color.KinoPub.text)
+        .lineLimit(2)
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 8)
+    .background(
+      RoundedRectangle(cornerRadius: 8, style: .continuous)
+        .fill(isSelected ? Color.KinoPub.selectionBackground : Color.clear)
+    )
+  }
+}
+
+/// Shared channel logo artwork on a black plate.
+struct ChannelArtwork: View {
+  let logo: String?
+
+  var body: some View {
     ZStack {
       Color.black
-      CachedAsyncImage(url: URL(string: channel.logo ?? "")) { image in
+      CachedAsyncImage(url: URL(string: logo ?? "")) { image in
         image
           .resizable()
           .renderingMode(.original)
           .aspectRatio(contentMode: .fit)
-          .padding(24)
+          .padding(8)
       } placeholder: {
-        Image(systemName: "sportscourt.fill")
-          .font(.system(size: 40))
+        Image(systemName: "play.tv.fill")
+          .font(.system(size: 22))
           .foregroundStyle(Color.KinoPub.subtitle)
       }
     }
-    .frame(maxWidth: .infinity)
-    .aspectRatio(16.0 / 9.0, contentMode: .fit)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-    .overlay(
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
-        .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.5)
-    )
-  }
-
-  private var liveBadge: some View {
-    HStack(spacing: 4) {
-      Circle()
-        .fill(Color.white)
-        .frame(width: 6, height: 6)
-      Text("LIVE")
-        .font(.system(size: 11, weight: .heavy))
-        .foregroundStyle(.white)
-    }
-    .padding(.horizontal, 8)
-    .padding(.vertical, 4)
-    .background(Color.red, in: Capsule())
   }
 }
 

@@ -111,7 +111,22 @@ class HomeModel: ObservableObject {
       for await (index, value) in group { slots[index] = value }
       return slots.compactMap { $0 }
     }
-    continueWatching = enriched
+
+    // Surface locally-started titles (> 10s) that the backend doesn't list yet, newest first.
+    let backendIds = Set(enriched.map { $0.id })
+    let localOnly = AppContext.shared.localProgressStore.allEntries()
+      .filter { !backendIds.contains($0.id) }
+      .map { entry -> ContinueItem in
+        let subtitle: String?
+        if let season = entry.season, let episode = entry.episode {
+          subtitle = "S\(season) · E\(episode)"
+        } else {
+          subtitle = entry.item.duration.totalFormatted
+        }
+        return ContinueItem(id: entry.id, item: entry.item, progress: entry.progress, subtitle: subtitle)
+      }
+
+    continueWatching = localOnly + enriched
   }
 
   /// Builds a Continue Watching entry from a fully-loaded media item.

@@ -15,6 +15,7 @@ import SkeletonUI
 struct MediaItemView: View {
 
   @EnvironmentObject var errorHandler: ErrorHandler
+  @Environment(\.appContext) private var appContext
   @StateObject private var itemModel: MediaItemModel
 
   @State private var plotExpanded: Bool = false
@@ -75,6 +76,10 @@ struct MediaItemView: View {
     .task {
       itemModel.fetchData()
       itemModel.loadBookmarkFolders()
+    }
+    // Cache artwork/title locally so a started title can resume in Continue Watching.
+    .onChange(of: itemModel.itemLoaded) { loaded in
+      if loaded { appContext.localProgressStore.cacheItem(itemModel.mediaItem) }
     }
     .handleError(state: $errorHandler.state)
   }
