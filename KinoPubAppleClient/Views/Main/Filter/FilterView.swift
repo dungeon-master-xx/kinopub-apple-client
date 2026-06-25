@@ -106,12 +106,7 @@ struct FilterView: View {
       }
       .pickerStyle(.menu)
 
-      Picker("Sort".localized, selection: $model.sort) {
-        ForEach(SortOption.allCases) { option in
-          Text(option.titleKey.localized).tag(option.rawValue)
-        }
-      }
-      .pickerStyle(.menu)
+      // Sort lives in the toolbar sort control now (see SortSelectionView), not in the filter.
 
       Picker("Period".localized, selection: $model.period) {
         ForEach(PeriodOption.allCases) { option in

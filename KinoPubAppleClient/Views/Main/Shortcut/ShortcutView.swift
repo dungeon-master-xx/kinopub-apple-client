@@ -10,18 +10,19 @@ import SwiftUI
 import KinoPubBackend
 import KinoPubUI
 
-struct ShortcutSelectionView: View {
+/// The catalog sort picker (moved out of the filter modal — it's now the primary sort control).
+struct SortSelectionView: View {
   @Environment(\.dismiss) private var dismiss
-  @Binding var shortcut: MediaShortcut
+  @Binding var sort: SortOption
 
   var body: some View {
     NavigationStack {
       Form {
         Section("Sort".localized) {
-          Picker("Sort".localized, selection: $shortcut) {
-            ForEach(MediaShortcut.allCases) { shortcut in
-              Text(shortcut.title.localized)
-                .tag(shortcut)
+          Picker("Sort".localized, selection: $sort) {
+            ForEach(SortOption.allCases) { option in
+              Text(option.titleKey.localized)
+                .tag(option)
             }
           }
           .pickerStyle(.inline)
@@ -43,8 +44,8 @@ struct ShortcutSelectionView: View {
   }
 }
 
-struct ShortcutSelectionView_Previews: PreviewProvider {
+struct SortSelectionView_Previews: PreviewProvider {
   static var previews: some View {
-    ShortcutSelectionView(shortcut: .constant(.fresh))
+    SortSelectionView(sort: .constant(.updated))
   }
 }
