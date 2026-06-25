@@ -8,8 +8,28 @@
 
 import Foundation
 
+/// Which TMDB department to prefer when several people share a name (an actor and a director can
+/// have the same name — searching blindly returns the most popular, usually the actor).
+enum TMDBPersonRole {
+  case acting
+  case directing
+
+  var department: String {
+    switch self {
+    case .acting: return "Acting"
+    case .directing: return "Directing"
+    }
+  }
+}
+
 protocol TMDBService {
-  func personImageURL(for name: String) async -> URL?
+  func personImageURL(for name: String, role: TMDBPersonRole) async -> URL?
+}
+
+extension TMDBService {
+  func personImageURL(for name: String) async -> URL? {
+    await personImageURL(for: name, role: .acting)
+  }
 }
 
 protocol TMDBServiceProvider {
@@ -29,9 +49,11 @@ final class TMDBServiceImpl: TMDBService {
     self.session = session
   }
 
-  func personImageURL(for name: String) async -> URL? {
-    let key = name.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !key.isEmpty, !apiKey.isEmpty else { return nil }
+  func personImageURL(for name: String, role: TMDBPersonRole) async -> URL? {
+    let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, !apiKey.isEmpty else { return nil }
+    // Cache per (role, name): the same name can resolve to different people as actor vs director.
+    let key = "\(role.department):\(trimmed)"
 
     lock.lock()
     if let cached = cache.object(forKey: key as NSString) {
@@ -47,7 +69,7 @@ final class TMDBServiceImpl: TMDBService {
     guard var components = URLComponents(string: "https://api.themoviedb.org/3/search/person") else { return nil }
     components.queryItems = [
       URLQueryItem(name: "api_key", value: apiKey),
-      URLQueryItem(name: "query", value: key),
+      URLQueryItem(name: "query", value: trimmed),
       URLQueryItem(name: "include_adult", value: "false")
     ]
     guard let url = components.url else { return nil }
@@ -55,7 +77,11 @@ final class TMDBServiceImpl: TMDBService {
     do {
       let (data, _) = try await session.data(from: url)
       let response = try JSONDecoder().decode(PersonSearchResponse.self, from: data)
-      if let path = response.results.first(where: { $0.profilePath != nil })?.profilePath,
+      let withPhoto = response.results.filter { $0.profilePath != nil }
+      // Prefer the person actually known for this role (the director, not the same-named actor),
+      // falling back to the most popular match when none is tagged.
+      let match = withPhoto.first(where: { $0.knownForDepartment == role.department }) ?? withPhoto.first
+      if let path = match?.profilePath,
          let imageURL = URL(string: "https://image.tmdb.org/t/p/w185\(path)") {
         lock.lock()
         cache.setObject(imageURL as NSURL, forKey: key as NSString)
@@ -76,11 +102,15 @@ final class TMDBServiceImpl: TMDBService {
     let results: [Person]
     struct Person: Decodable {
       let profilePath: String?
-      enum CodingKeys: String, CodingKey { case profilePath = "profile_path" }
+      let knownForDepartment: String?
+      enum CodingKeys: String, CodingKey {
+        case profilePath = "profile_path"
+        case knownForDepartment = "known_for_department"
+      }
     }
   }
 }
 
 struct TMDBServiceMock: TMDBService {
-  func personImageURL(for name: String) async -> URL? { nil }
+  func personImageURL(for name: String, role: TMDBPersonRole) async -> URL? { nil }
 }
