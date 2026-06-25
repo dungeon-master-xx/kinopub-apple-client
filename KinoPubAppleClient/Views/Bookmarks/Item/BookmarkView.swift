@@ -116,7 +116,7 @@ struct BookmarkView: View {
       }, onRefresh: {
         await model.refresh()
       }, navigationLinkProvider: { item in
-        BookmarksRoutesLinkProvider().link(for: item)
+        RouteLinkProvider().link(for: item)
       })
     }
   }

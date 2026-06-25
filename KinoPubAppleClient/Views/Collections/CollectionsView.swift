@@ -29,34 +29,7 @@ struct CollectionsView: View {
         .background(Color.KinoPub.background)
         .task { await model.fetchCollections() }
         .refreshable { await model.refresh() }
-        .navigationDestination(for: CollectionsRoutes.self) { route in
-          switch route {
-          case .collection(let collection):
-            CollectionDetailView(model: CollectionDetailModel(collection: collection,
-                                                              collectionsService: appContext.collectionsService,
-                                                              errorHandler: errorHandler))
-          case .details(let item):
-            MediaItemView(model: MediaItemModel(mediaItemId: item.id,
-                                                itemsService: appContext.contentService,
-                                                downloadManager: appContext.downloadManager,
-                                                linkProvider: CollectionsRoutesLinkProvider(),
-                                                errorHandler: errorHandler))
-          case .player(let item):
-            PlayerView(manager: PlayerManager(playItem: item,
-                                              watchMode: .media,
-                                              downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                              actionsService: appContext.actionsService))
-          case .trailerPlayer(let item):
-            PlayerView(manager: PlayerManager(playItem: item,
-                                              watchMode: .trailer,
-                                              downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                              actionsService: appContext.actionsService))
-          case .seasons(let seasons):
-            SeasonsView(model: SeasonsModel(seasons: seasons, linkProvider: CollectionsRoutesLinkProvider()))
-          case .season(let season):
-            SeasonView(model: SeasonModel(season: season, linkProvider: CollectionsRoutesLinkProvider()))
-          }
-        }
+        .routeDestinations()
         .handleError(state: $errorHandler.state)
     }
   }
@@ -93,7 +66,7 @@ struct CollectionsView: View {
     ScrollView {
       LazyVGrid(columns: gridColumns, spacing: 16) {
         ForEach(model.collections) { collection in
-          NavigationLink(value: CollectionsRoutes.collection(collection)) {
+          NavigationLink(value: Route.collection(collection)) {
             CollectionCard(collection: collection)
               .onAppear {
                 model.loadMoreContent(after: collection)

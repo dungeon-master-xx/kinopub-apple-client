@@ -18,7 +18,7 @@ struct WatchingView: View {
   @StateObject private var model: WatchingModel
   // Local path: "New episodes" and "Watching" are two top-level screens — each owns its own
   // navigation stack so they never share one path binding (which would crash on switch).
-  @State private var path: [WatchingRoutes] = []
+  @State private var path: [Route] = []
 
   init(model: @autoclosure @escaping () -> WatchingModel) {
     _model = StateObject(wrappedValue: model())
@@ -40,30 +40,7 @@ struct WatchingView: View {
       .task {
         await model.fetchItems()
       }
-      .navigationDestination(for: WatchingRoutes.self) { route in
-        switch route {
-        case .details(let id):
-          MediaItemView(model: MediaItemModel(mediaItemId: id,
-                                              itemsService: appContext.contentService,
-                                              downloadManager: appContext.downloadManager,
-                                              linkProvider: WatchingRoutesLinkProvider(),
-                                              errorHandler: errorHandler))
-        case .player(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .media,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .trailerPlayer(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .trailer,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .seasons(let seasons):
-          SeasonsView(model: SeasonsModel(seasons: seasons, linkProvider: WatchingRoutesLinkProvider()))
-        case .season(let season):
-          SeasonView(model: SeasonModel(season: season, linkProvider: WatchingRoutesLinkProvider()))
-        }
-      }
+      .routeDestinations()
       .handleError(state: $errorHandler.state)
     }
   }
@@ -98,7 +75,7 @@ struct WatchingView: View {
     ScrollView {
       LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 16, alignment: .top)], spacing: 24) {
         ForEach(model.serials) { serial in
-          NavigationLink(value: WatchingRoutes.details(serial.id)) {
+          NavigationLink(value: Route.detailsByID(serial.id)) {
             WatchingSerialView(serial: serial)
           }
           #if os(macOS)

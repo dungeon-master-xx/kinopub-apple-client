@@ -19,6 +19,8 @@ struct SportView: View {
 #endif
   @StateObject private var model: SportModel
   @State private var selectedChannel: TVChannel?
+  // Shares the app-wide Route type so the detail column never mismatches path types on switch.
+  @State private var path: [Route] = []
 
   // Compact (iPhone) grid — small tiles, ~2× more per row than the old layout.
   private let gridColumns = [GridItem(.adaptive(minimum: 140), spacing: 14, alignment: .top)]
@@ -37,18 +39,13 @@ struct SportView: View {
   }
 
   var body: some View {
-    NavigationStack {
+    NavigationStack(path: $path) {
       content
         .navigationTitle("Sport")
         .background(Color.KinoPub.background)
         .task { await model.fetchChannels() }
         .refreshable { await model.refresh() }
-        .navigationDestination(for: TVChannel.self) { channel in
-          PlayerView(manager: PlayerManager(playItem: channel,
-                                            watchMode: .media,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        }
+        .routeDestinations()
         .handleError(state: $errorHandler.state)
     }
   }
@@ -72,7 +69,7 @@ struct SportView: View {
     ScrollView {
       LazyVGrid(columns: gridColumns, spacing: 16) {
         ForEach(model.channels) { channel in
-          NavigationLink(value: channel) {
+          NavigationLink(value: Route.player(channel)) {
             LiveChannelCard(channel: channel)
           }
         }

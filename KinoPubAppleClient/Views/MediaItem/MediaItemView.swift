@@ -978,7 +978,7 @@ struct MediaItemView_Previews: PreviewProvider {
                                           itemsService: VideoContentServiceMock(),
                                           downloadManager: DownloadManager<DownloadMeta>(fileSaver: FileSaver(),
                                                                                       database: DownloadedFilesDatabase<DownloadMeta>(fileSaver: FileSaver())),
-                                          linkProvider: MainRoutesLinkProvider(),
+                                          linkProvider: RouteLinkProvider(),
                                           errorHandler: ErrorHandler()))
     }
   }

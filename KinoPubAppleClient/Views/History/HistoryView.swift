@@ -34,30 +34,7 @@ struct HistoryView: View {
       .task {
         await catalog.fetchItems()
       }
-      .navigationDestination(for: HistoryRoutes.self) { route in
-        switch route {
-        case .details(let item):
-          MediaItemView(model: MediaItemModel(mediaItemId: item.id,
-                                              itemsService: appContext.contentService,
-                                              downloadManager: appContext.downloadManager,
-                                              linkProvider: HistoryRoutesLinkProvider(),
-                                              errorHandler: errorHandler))
-        case .player(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .media,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .trailerPlayer(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .trailer,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .seasons(let seasons):
-          SeasonsView(model: SeasonsModel(seasons: seasons, linkProvider: HistoryRoutesLinkProvider()))
-        case .season(let season):
-          SeasonView(model: SeasonModel(season: season, linkProvider: HistoryRoutesLinkProvider()))
-        }
-      }
+      .routeDestinations()
       .handleError(state: $errorHandler.state)
     }
   }
@@ -96,7 +73,7 @@ struct HistoryView: View {
     }, onRefresh: {
       await catalog.refresh()
     }, navigationLinkProvider: { item in
-      HistoryRoutesLinkProvider().link(for: item)
+      RouteLinkProvider().link(for: item)
     })
   }
 
@@ -107,7 +84,7 @@ struct HistoryView: View {
           Section {
             LazyVGrid(columns: gridLayout(width: width), spacing: 24) {
               ForEach(section.items, id: \.uniqueID) { historyItem in
-                NavigationLink(value: HistoryRoutesLinkProvider().link(for: historyItem.item)) {
+                NavigationLink(value: RouteLinkProvider().link(for: historyItem.item)) {
                   HistoryItemCell(historyItem: historyItem)
                     .onAppear {
                       catalog.loadMoreContent(after: historyItem.item)

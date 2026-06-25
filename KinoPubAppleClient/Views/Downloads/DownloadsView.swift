@@ -32,20 +32,7 @@ struct DownloadsView: View {
       }
       .navigationTitle("Downloads")
       .background(Color.KinoPub.background)
-      .navigationDestination(for: DownloadsRoutes.self) { route in
-        switch route {
-        case .player(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .media,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .trailerPlayer(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .trailer,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        }
-      }
+      .routeDestinations()
       .onAppear(perform: {
         catalog.refresh()
       })
@@ -79,7 +66,7 @@ struct DownloadsView: View {
   
   var downloadedFilesList: some View {
     ForEach(catalog.downloadedItems, id: \.originalURL) { fileInfo in
-      NavigationLink(value: DownloadsRoutes.player(fileInfo.metadata)) {
+      NavigationLink(value: Route.player(fileInfo.metadata)) {
         DownloadedItemView(mediaItem: fileInfo.metadata, progress: nil) { paused in
           
         }

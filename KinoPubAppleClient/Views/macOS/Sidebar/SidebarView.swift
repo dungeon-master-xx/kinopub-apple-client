@@ -18,33 +18,24 @@ struct SidebarView: View {
   @EnvironmentObject var authState: AuthState
 
   var body: some View {
-    splitView
-      .sheet(isPresented: $authState.shouldShowAuthentication, content: {
-        authSheet
-      })
-      .environmentObject(navigationState)
-      .environmentObject(errorHandler)
-      .task {
-        await authState.check()
-      }
-  }
-
-  private var splitView: some View {
+    // Every section's detail NavigationStack now uses the shared `Route` element type, so the
+    // NavigationSplitView detail column reconciles cleanly across section switches (no
+    // AnyNavigationPath.comparisonTypeMismatch). That means no per-selection `.id` hack — the
+    // sidebar keeps its identity, scroll position, and selection animation.
     NavigationSplitView(columnVisibility: $navigationState.columnVisibility) {
       Sidebar(selection: $navigationState.sidebarSelection)
     } detail: {
       SidebarNavigationDetail(selection: $navigationState.sidebarSelection)
     }
-    // Each selection's detail hosts a NavigationStack with its own path *type* ([MainRoutes],
-    // [DownloadsRoutes], [WatchingRoutes], …). NavigationSplitView keeps the detail column's
-    // navigation state itself, so switching sections makes SwiftUI reconcile the previous
-    // section's path against the new one and trap in NavigationColumnState with
-    // AnyNavigationPath.Error.comparisonTypeMismatch. Re-identifying the whole split view per
-    // selection tears down that column state so each section starts with a fresh, correctly-typed
-    // stack. (A detail-only .id is not enough — the column state lives on the split view.)
-    // The auth sheet + .task stay on the stable parent so they don't re-run on every switch.
-    .id(navigationState.sidebarSelection)
     .accentColor(Color.KinoPub.accent)
+    .sheet(isPresented: $authState.shouldShowAuthentication, content: {
+      authSheet
+    })
+    .environmentObject(navigationState)
+    .environmentObject(errorHandler)
+    .task {
+      await authState.check()
+    }
   }
 
   var authSheet: some View {
