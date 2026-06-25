@@ -26,6 +26,19 @@ struct DeviceSettingsView: View {
         form
       }
     }
+    .overlay(alignment: .bottom) {
+      if model.didSave {
+        Label("Saved".localized, systemImage: "checkmark.circle.fill")
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundStyle(.white)
+          .padding(.horizontal, 16)
+          .padding(.vertical, 10)
+          .background(Capsule().fill(Color.KinoPub.accent))
+          .padding(.bottom, 24)
+          .transition(.move(edge: .bottom).combined(with: .opacity))
+      }
+    }
+    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: model.didSave)
     .navigationTitle("Device settings".localized)
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {

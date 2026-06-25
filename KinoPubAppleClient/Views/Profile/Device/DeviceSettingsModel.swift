@@ -9,6 +9,9 @@ import Foundation
 import KinoPubBackend
 import OSLog
 import KinoPubLogging
+#if canImport(UIKit)
+import UIKit
+#endif
 
 @MainActor
 class DeviceSettingsModel: ObservableObject {
@@ -21,6 +24,8 @@ class DeviceSettingsModel: ObservableObject {
   @Published var isLoading: Bool = false
   @Published var isSaving: Bool = false
   @Published var deviceTitle: String = ""
+  /// Flips true briefly after a successful save to drive the "Saved" confirmation toast.
+  @Published var didSave: Bool = false
 
   init(deviceService: DeviceService, errorHandler: ErrorHandler) {
     self.deviceService = deviceService
@@ -50,9 +55,22 @@ class DeviceSettingsModel: ObservableObject {
       // Keep what the user chose (optimistic). We intentionally do NOT re-fetch here: the server
       // can be briefly eventually-consistent, and re-reading stale values made the toggles appear
       // to "reset" right after saving.
+      confirmSaved()
     } catch {
       Logger.app.debug("save device settings error: \(error)")
       errorHandler.setError(error)
+    }
+  }
+
+  /// iOS-standard success feedback: a success haptic plus a brief "Saved" confirmation toast.
+  private func confirmSaved() {
+    #if canImport(UIKit)
+    UINotificationFeedbackGenerator().notificationOccurred(.success)
+    #endif
+    didSave = true
+    Task {
+      try? await Task.sleep(nanoseconds: 1_800_000_000)
+      didSave = false
     }
   }
 }
