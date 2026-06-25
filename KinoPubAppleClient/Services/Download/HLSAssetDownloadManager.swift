@@ -265,6 +265,12 @@ public final class HLSAssetDownloadManager: NSObject, ObservableObject, AVAssetD
   /// persisted pending store (the system only gives us back the `taskDescription` key).
   public func restorePendingDownloads() {
     let pending = readPending()
+    // Reclaim orphaned .movpkg bundles left by failed/cancelled/retried downloads — keeping anything
+    // still tracked (saved downloads + in-flight/interrupted partials).
+    let keepPartials = Set(pending.compactMap { $0.partialRelativePath })
+    DispatchQueue.global(qos: .utility).async { [store] in
+      store.sweepOrphans(keepRelativePaths: keepPartials)
+    }
     guard !pending.isEmpty else { return }
 
     session.getAllTasks { [weak self] tasks in
@@ -413,6 +419,11 @@ public final class HLSAssetDownloadManager: NSObject, ObservableObject, AVAssetD
         let delays: [UInt64] = [5, 15, 30, 60, 120]
         let seconds = delays[min(ctx.retryCount, delays.count - 1)]
         let next = ctx.retryCount + 1
+        // The failed attempt's partial .movpkg won't be reused by the fresh task — delete it so
+        // retries don't pile up abandoned bundles (the main cause of runaway disk usage).
+        if let partial = ctx.downloadURL {
+          try? FileManager.default.removeItem(at: partial)
+        }
         Logger.kit.error("[HLS] rate-limited (429) for key \(key); retry \(next + 1) in \(seconds)s")
         Task { @MainActor [weak self] in
           try? await Task.sleep(nanoseconds: seconds * 1_000_000_000)

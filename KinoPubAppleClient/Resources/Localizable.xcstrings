@@ -4286,6 +4286,22 @@
           }
         }
       }
+    },
+    "Storage used": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storage used"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Занято на диске"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

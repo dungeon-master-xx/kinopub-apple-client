@@ -25,6 +25,8 @@ class DownloadsCatalog: ObservableObject {
   @Published public var hlsCompleted: [HLSDownloadedAsset] = []
   /// HLS downloads interrupted by a force-quit (can't resume) — offered for re-download.
   @Published public var hlsInterrupted: [HLSInterruptedDownload] = []
+  /// Total on-disk size of all completed downloads (HLS .movpkg + mp4), for the storage footer.
+  @Published public var totalBytes: Int64 = 0
 
   private var hlsManager: HLSAssetDownloadManager { AppContext.shared.hlsDownloadManager }
   private var hlsStore: HLSDownloadsStore { AppContext.shared.hlsDownloadsStore }
@@ -71,6 +73,7 @@ class DownloadsCatalog: ObservableObject {
         self.hlsInterrupted = self.hlsManager.interrupted
       })
       .store(in: &cancellables)
+    recomputeTotalSize()
     self.activeDownloads.forEach({
       // Re-deliver on the main queue asynchronously: a progress tick must not republish *during*
       // a SwiftUI view update (that traps with "Publishing changes from within view updates").
@@ -109,6 +112,20 @@ class DownloadsCatalog: ObservableObject {
       hlsStore.remove(hlsCompleted[index])
     }
     hlsCompleted.remove(atOffsets: indexSet)
+  }
+
+  /// Sum the on-disk size of every completed download (HLS bundles + mp4 files) off the main thread.
+  private func recomputeTotalSize() {
+    let mp4URLs = downloadedItems.map { $0.localFileURL }
+    let store = hlsStore
+    Task.detached(priority: .utility) {
+      let hls = store.totalDownloadedBytes()
+      let mp4 = mp4URLs.reduce(Int64(0)) { acc, url in
+        let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
+        return acc + ((attrs?[.size] as? Int64) ?? 0)
+      }
+      await MainActor.run { [weak self] in self?.totalBytes = hls + mp4 }
+    }
   }
 
   /// A completed download must never also appear as "interrupted" (e.g. a stale pending entry whose

@@ -68,6 +68,17 @@ struct DownloadsView: View {
           hlsCompletedList
         } header: { sectionHeader("Downloaded") }
       }
+      if catalog.totalBytes > 0 {
+        HStack {
+          Spacer()
+          Text("\("Storage used".localized): \(ByteCountFormatter.string(fromByteCount: catalog.totalBytes, countStyle: .file))")
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(Color.KinoPub.subtitle)
+          Spacer()
+        }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+      }
     }
     .listStyle(.inset)
     .scrollContentBackground(.hidden)
