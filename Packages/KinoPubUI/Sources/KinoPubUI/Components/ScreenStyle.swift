@@ -54,6 +54,24 @@ public extension View {
 #endif
   }
 
+  /// Shapes the context-menu "lift" preview to a rounded rectangle so a surrounding ScrollView /
+  /// LazyVGrid / horizontal stack doesn't clip the lifted cell on long-press (rawtherapy technique:
+  /// `.contentShape(.contextMenuPreview, …)` renders the preview in its own un-clipped layer). Apply
+  /// to the same view that carries `.contextMenu`.
+  @ViewBuilder
+  func contextMenuPreviewShape(cornerRadius: CGFloat = 12) -> some View {
+    let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+#if os(iOS)
+    if #available(iOS 17.0, *) {
+      self.contentShape(.contextMenuPreview, shape)
+    } else {
+      self.contentShape(shape)
+    }
+#else
+    self.contentShape(shape)
+#endif
+  }
+
   /// Wraps content in a floating capsule "island": real Liquid Glass on OS 26, an ultra-thin material
   /// capsule on older systems. Use for pinned/sticky section headers so they read as Apple-style
   /// floating islands over the scrolling content instead of a flat opaque bar.

@@ -583,6 +583,8 @@ struct MediaItemView: View {
                 .buttonStyle(.plain)
                 #endif
                 .id(episode.id)
+                // Keep the long-press lift preview from being clipped by the horizontal ScrollView.
+                .contextMenuPreviewShape(cornerRadius: 12)
                 .contextMenu {
                   Button {
                     itemModel.toggleEpisodeWatched(episode: episode, season: season.number)
