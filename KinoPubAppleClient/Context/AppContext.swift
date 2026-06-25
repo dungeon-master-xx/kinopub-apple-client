@@ -38,6 +38,7 @@ typealias AppContextProtocol = AuthorizationServiceProvider
 & UserServiceProvider
 & UserActionsServiceProvider
 & LocalWatchProgressProvider
+& MediaLibraryProvider
 & TMDBServiceProvider
 
 // MARK: - AppContext
@@ -59,6 +60,7 @@ struct AppContext: AppContextProtocol {
   var seasonDownloadManager: SeasonDownloadManager
   var actionsService: UserActionsService
   var localProgressStore: LocalWatchProgressStore
+  var libraryState: MediaLibraryStore
   var tmdbService: TMDBService
   /// Offline HLS downloads (iOS). Accessed directly via `AppContext.shared` (not in the protocol).
   var hlsDownloadsStore: HLSDownloadsStore
@@ -104,7 +106,18 @@ struct AppContext: AppContextProtocol {
     }
     // Api Client
     let apiClient = makeApiClient(with: configuration.baseURL, accessTokenService: accessTokenService)
-    
+    let actionsService = UserActionsServiceImpl(apiClient: apiClient)
+
+    // Single client-side library state: optimistic bookmarks/watchlist/watched + cached bookmark
+    // folders + audio-track prefs + a façade over downloads and watch progress — one source of truth.
+    let localProgressStore = LocalWatchProgressStore()
+    let libraryState = MediaLibraryStore(downloadManager: downloadManager,
+                                         hlsDownloadManager: hlsDownloadManager,
+                                         hlsStore: hlsDownloadsStore,
+                                         downloadedFilesDatabase: downloadedFilesDatabase,
+                                         progressStore: localProgressStore,
+                                         actionsService: actionsService)
+
     let authService = AuthorizationServiceImpl(apiClient: apiClient,
                                                configuration: configuration,
                                                accessTokenService: accessTokenService)
@@ -121,8 +134,9 @@ struct AppContext: AppContextProtocol {
                       downloadedFilesDatabase: downloadedFilesDatabase,
                       downloadNotificationManager: downloadNotificationManager,
                       seasonDownloadManager: seasonDownloadManager,
-                      actionsService: UserActionsServiceImpl(apiClient: apiClient),
-                      localProgressStore: LocalWatchProgressStore(),
+                      actionsService: actionsService,
+                      localProgressStore: localProgressStore,
+                      libraryState: libraryState,
                       tmdbService: TMDBServiceImpl(apiKey: configuration.tmdbAPIKey),
                       hlsDownloadsStore: hlsDownloadsStore,
                       hlsDownloadManager: hlsDownloadManager)

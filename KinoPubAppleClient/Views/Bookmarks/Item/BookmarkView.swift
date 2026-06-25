@@ -117,7 +117,7 @@ struct BookmarkView: View {
         await model.refresh()
       }, navigationLinkProvider: { item in
         RouteLinkProvider().link(for: item)
-      })
+      }, statusOverlay: { AnyView(MediaCardStatusBadge(item: $0)) })
     }
   }
 }

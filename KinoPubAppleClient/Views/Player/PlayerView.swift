@@ -45,6 +45,7 @@ struct PlayerView: View {
         UIApplication.shared.isIdleTimerDisabled = false
         AppDelegate.orientationLock = .all
       }
+      .playbackErrorAlert($playerManager.playbackError, onDismiss: { dismiss() })
 #elseif os(macOS)
     VideoPlayer(player: playerManager.player)
       .ignoresSafeArea(.all)
@@ -57,6 +58,7 @@ struct PlayerView: View {
           playerManager.seekToContinueWatching() // auto-resume
         }
       }
+      .playbackErrorAlert($playerManager.playbackError, onDismiss: { dismiss() })
 #endif
   }
 
@@ -70,6 +72,20 @@ struct PlayerView: View {
 
   private func toggleSidebar() {
     navigationState.columnVisibility = .detailOnly
+  }
+}
+
+private extension View {
+  /// Presents the player's failure diagnosis (and pops the player on dismiss) so an unplayable
+  /// stream is visible on-device rather than just a silent crossed-out play.
+  func playbackErrorAlert(_ error: Binding<String?>, onDismiss: @escaping () -> Void) -> some View {
+    alert("Playback failed".localized,
+          isPresented: Binding(get: { error.wrappedValue != nil },
+                               set: { if !$0 { error.wrappedValue = nil } })) {
+      Button("OK", role: .cancel) { onDismiss() }
+    } message: {
+      Text(error.wrappedValue ?? "")
+    }
   }
 }
 

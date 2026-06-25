@@ -70,6 +70,30 @@ final class DeviceServiceImpl: DeviceService {
     }
   }
 
+  func syncCapabilities() async {
+    // Match the kino.pub device profile to what this hardware can DECODE. When HEVC decode is
+    // available we advertise HEVC + 4K (kino.pub then serves HEVC + HDR10; AVPlayer plays it, tone-
+    // mapping to SDR displays like the base iPad), AND turn on mixedPlaylist so the master also
+    // carries h264 variants — AVPlayer can't open an HEVC-only HDR master (error -11868/-17223,
+    // the crossed-out play), so the fallback guarantees playback while still allowing HDR where the
+    // device can use the HEVC variant. When HEVC isn't decodable, turn all three off (plain h264).
+    let hevc = DeviceCapabilities.supportsHEVC
+    do {
+      let device = try await fetchCurrentDevice()
+      var settings = try await fetchSettings(deviceId: device.id)
+      guard settings.supportHevc != hevc
+              || settings.support4k != hevc
+              || settings.mixedPlaylist != hevc else { return }
+      settings.supportHevc = hevc
+      settings.support4k = hevc
+      settings.mixedPlaylist = hevc
+      try await updateSettings(deviceId: device.id, settings: settings)
+      Logger.app.debug("device capabilities synced to HEVC-decodable=\(hevc) (+mixedPlaylist)")
+    } catch {
+      Logger.app.debug("syncCapabilities error: \(error)")
+    }
+  }
+
   /// The hardware model identifier, e.g. "iPhone16,2" / "Mac15,3".
   private static var machineModel: String {
     var systemInfo = utsname()

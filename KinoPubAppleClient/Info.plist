@@ -9,7 +9,7 @@
 	<key>ClientSecret</key>
 	<string>cgg3gtifu46urtfp2zp1nqtba0k2ezxh</string>
 	<key>TMDBAPIKey</key>
-	<string>REPLACE_WITH_TMDB_API_KEY</string>
+	<string>b5fc917909a9e51fa53ae1612afa3617</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

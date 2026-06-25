@@ -24,6 +24,9 @@ class PlayerManager: ObservableObject {
   @Published var isPlaying: Bool = false
   @Published var watchMark: WatchData?
   @Published var continueTime: TimeInterval?
+  /// Human-readable diagnosis shown when the item can't be played (the native "crossed-out play"),
+  /// so failures (e.g. an HLS stream AVPlayer rejects) surface on-device instead of silently.
+  @Published var playbackError: String?
   
   lazy var player: AVPlayer = {
     guard let fileURL else { return AVPlayer() }
@@ -73,6 +76,7 @@ class PlayerManager: ObservableObject {
   private var rateObservation: NSKeyValueObservation?
   private var seekObservation: NSKeyValueObservation?
   private var audioObservation: NSKeyValueObservation?
+  private var failureObservation: NSKeyValueObservation?
   private var actionsService: UserActionsService
   
   private var fileURL: URL? {
@@ -147,10 +151,39 @@ class PlayerManager: ObservableObject {
       }
     }
 
+    // Surface the exact reason the native player shows the "crossed-out play" (item failed to load),
+    // so an unplayable stream is diagnosable on-device instead of failing silently.
+    failureObservation = player.currentItem?.observe(\.status, options: [.new]) { [weak self] item, _ in
+      guard item.status == .failed else { return }
+      DispatchQueue.main.async { self?.reportPlaybackFailure(item) }
+    }
+
     playerTimeObserver = PlayerTimeObserver(player: player, period: 10.0, timeUpdateHandler: { [weak self] time in
       self?.saveWatchMark(time: time)
       self?.captureCurrentAudio()
     })
+  }
+
+  // MARK: - Failure diagnostics
+
+  private func reportPlaybackFailure(_ item: AVPlayerItem) {
+    let error = item.error as NSError?
+    var parts: [String] = []
+    if let error {
+      parts.append("\(error.domain) \(error.code)")
+      parts.append(error.localizedDescription)
+      if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+        parts.append("underlying \(underlying.domain) \(underlying.code)")
+      }
+    }
+    // The error log carries the server/format comment AVPlayer recorded (often the real reason).
+    if let event = item.errorLog()?.events.last {
+      if let comment = event.errorComment, !comment.isEmpty { parts.append(comment) }
+      parts.append("status \(event.errorStatusCode)")
+    }
+    let message = parts.isEmpty ? "Unknown playback error" : parts.joined(separator: "\n")
+    Logger.app.error("Playback failed: \(message)")
+    playbackError = message
   }
 
   // MARK: - Audio track preference (озвучка)
