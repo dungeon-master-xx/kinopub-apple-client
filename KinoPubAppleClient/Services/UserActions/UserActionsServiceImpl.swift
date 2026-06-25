@@ -48,4 +48,14 @@ final class UserActionsServiceImpl: UserActionsService {
     return try await apiClient.performRequest(with: request, decodingType: ArrayData<Bookmark>.self).items
   }
 
+  func renameBookmarkFolder(id: Int, title: String) async throws {
+    let request = RenameBookmarkFolderRequest(id: id, title: title)
+    _ = try await apiClient.performRequest(with: request, decodingType: EmptyResponseData.self)
+  }
+
+  func removeBookmarkFolder(id: Int) async throws {
+    let request = RemoveBookmarkFolderRequest(id: id)
+    _ = try await apiClient.performRequest(with: request, decodingType: EmptyResponseData.self)
+  }
+
 }

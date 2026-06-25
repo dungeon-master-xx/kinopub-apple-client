@@ -40,6 +40,7 @@ struct BookmarksView: View {
         case .bookmark(let bookmark):
           BookmarkView(model: BookmarkModel(bookmark: bookmark,
                                             itemsService: appContext.contentService,
+                                            actionsService: appContext.actionsService,
                                             errorHandler: errorHandler))
         case .player(let item):
           PlayerView(manager: PlayerManager(playItem: item,
