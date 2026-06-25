@@ -17,6 +17,7 @@ struct DownloadsView: View {
   @Environment(\.appContext) var appContext
   @StateObject private var catalog: DownloadsCatalog
   @Environment(\.sectionEmbedded) private var sectionEmbedded
+  @State private var showStorage = false
 
   init(catalog: @autoclosure @escaping () -> DownloadsCatalog) {
     _catalog = StateObject(wrappedValue: catalog())
@@ -44,6 +45,9 @@ struct DownloadsView: View {
     .onAppear(perform: {
       catalog.refresh()
     })
+    .sheet(isPresented: $showStorage, onDismiss: { catalog.refresh() }) {
+      StorageBreakdownView()
+    }
   }
   
   private var hasActive: Bool { !catalog.activeDownloads.isEmpty || !catalog.hlsActive.isEmpty }
@@ -69,15 +73,21 @@ struct DownloadsView: View {
         } header: { sectionHeader("Downloaded") }
       }
       if catalog.totalBytes > 0 {
-        HStack {
-          Spacer()
-          Text("\("Storage used".localized): \(ByteCountFormatter.string(fromByteCount: catalog.totalBytes, countStyle: .file))")
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(Color.KinoPub.subtitle)
-          Spacer()
+        Button {
+          showStorage = true
+        } label: {
+          HStack {
+            Image(systemName: "internaldrive")
+            Text("Storage used".localized)
+            Spacer()
+            Text(ByteCountFormatter.string(fromByteCount: catalog.totalBytes, countStyle: .file))
+              .foregroundStyle(Color.KinoPub.subtitle)
+            Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(Color.KinoPub.subtitle)
+          }
+          .font(.system(size: 14, weight: .medium))
+          .foregroundStyle(Color.KinoPub.text)
         }
         .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
       }
     }
     .listStyle(.inset)
@@ -185,6 +195,98 @@ struct DownloadsView: View {
   var emptyView: some View {
     EmptyStateView(systemImage: "arrow.down.circle", title: "You don't have any downloads yet".localized)
       .background(Color.KinoPub.background)
+  }
+}
+
+// MARK: - Storage breakdown
+
+/// A breakdown of the app's on-disk usage so the user can see where space goes (HLS downloads live in
+/// Library — invisible to the Files app — and keep every audio track, so they're bigger than the
+/// source). Lets the user clear the image cache and sweep orphaned download files.
+private struct StorageBreakdownView: View {
+  @Environment(\.dismiss) private var dismiss
+  @Environment(\.appContext) private var appContext
+  @State private var breakdown: StorageUsage?
+  @State private var busy = false
+
+  var body: some View {
+    NavigationStack {
+      List {
+        if let breakdown {
+          Section {
+            row("Downloads".localized, breakdown.downloads)
+            row("Image cache".localized, breakdown.imageCache)
+            row("Other".localized, breakdown.other)
+          } footer: {
+            Text("HLS downloads are stored in the app's private storage (not visible in the Files app) and keep every audio track, so they're larger than the source file.".localized)
+          }
+          Section {
+            HStack { Text("Total".localized).bold(); Spacer(); Text(format(breakdown.total)).bold() }
+          }
+          Section {
+            Button("Clear image cache".localized) {
+              ImageCache.shared.clear()
+              recompute()
+            }
+            Button("Remove leftover download files".localized) {
+              busy = true
+              let keep: Set<String> = []
+              DispatchQueue.global(qos: .utility).async {
+                AppContext.shared.hlsDownloadsStore.sweepOrphans(keepRelativePaths: keep)
+                DispatchQueue.main.async { recompute() }
+              }
+            }
+          }
+        } else {
+          HStack { Spacer(); ProgressView(); Spacer() }
+        }
+      }
+      .navigationTitle("Storage".localized)
+      .toolbar {
+        ToolbarItem(placement: .confirmationAction) {
+          Button("Done".localized) { dismiss() }
+        }
+      }
+    }
+    .onAppear(perform: recompute)
+  }
+
+  private func row(_ title: String, _ bytes: Int64) -> some View {
+    HStack { Text(title); Spacer(); Text(format(bytes)).foregroundStyle(Color.KinoPub.subtitle) }
+  }
+
+  private func format(_ bytes: Int64) -> String {
+    ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+  }
+
+  private func recompute() {
+    busy = true
+    let store = AppContext.shared.hlsDownloadsStore
+    let mp4URLs = (AppContext.shared.downloadedFilesDatabase.readData() ?? []).map { $0.localFileURL }
+    Task.detached(priority: .utility) {
+      let result = StorageUsage.compute(hlsStore: store, mp4URLs: mp4URLs)
+      await MainActor.run { self.breakdown = result; self.busy = false }
+    }
+  }
+}
+
+/// Computed on-disk usage buckets. `total` is the whole app data container (Documents + Library + tmp).
+private struct StorageUsage {
+  let total: Int64
+  let downloads: Int64
+  let imageCache: Int64
+  var other: Int64 { max(0, total - downloads - imageCache) }
+
+  static func compute(hlsStore: HLSDownloadsStore, mp4URLs: [URL]) -> StorageUsage {
+    let home = URL(fileURLWithPath: NSHomeDirectory())
+    let containers = ["Documents", "Library", "tmp"].map { home.appendingPathComponent($0) }
+    let total = containers.reduce(Int64(0)) { $0 + HLSDownloadsStore.directorySize(at: $1) }
+    let mp4 = mp4URLs.reduce(Int64(0)) { acc, url in
+      acc + ((try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0)
+    }
+    let downloads = hlsStore.totalDownloadedBytes() + mp4
+    let imageCache = Int64(ImageCache.shared.diskUsageBytes())
+    return StorageUsage(total: total, downloads: downloads, imageCache: imageCache)
   }
 }
 

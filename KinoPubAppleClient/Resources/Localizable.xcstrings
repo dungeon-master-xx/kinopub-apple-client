@@ -4302,6 +4302,70 @@
           }
         }
       }
+    },
+    "Image cache": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image cache"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Кэш изображений"
+          }
+        }
+      }
+    },
+    "Clear image cache": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear image cache"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Очистить кэш изображений"
+          }
+        }
+      }
+    },
+    "Remove leftover download files": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove leftover download files"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить остаточные файлы загрузок"
+          }
+        }
+      }
+    },
+    "HLS downloads are stored in the app's private storage (not visible in the Files app) and keep every audio track, so they're larger than the source file.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HLS downloads are stored in the app's private storage (not visible in the Files app) and keep every audio track, so they're larger than the source file."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HLS-загрузки хранятся в приватном хранилище приложения (не видны в Файлах) и содержат все аудиодорожки, поэтому занимают больше, чем исходный файл."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
