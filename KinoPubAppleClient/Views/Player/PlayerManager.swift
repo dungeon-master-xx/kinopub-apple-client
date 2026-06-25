@@ -71,13 +71,16 @@ class PlayerManager: ObservableObject {
   private var fileURL: URL? {
     switch watchMode {
     case .media:
-      let downloadedFiles = downloadedFilesDatabase.readData()
-      // Prefer a fully-downloaded local file — but only if it's actually on disk. A failed or
-      // partial download leaves a stale DB row whose file is missing; falling through to streaming
-      // then plays the title instead of showing a black screen ("downloaded file won't open").
-      if let file = downloadedFiles?.filter({ $0.metadata.id == playItem.id }).first,
-         FileManager.default.fileExists(atPath: file.localFileURL.path) {
-        return file.localFileURL
+      let downloadedFiles = downloadedFilesDatabase.readData() ?? []
+      let sameItem = downloadedFiles.filter { $0.metadata.id == playItem.id }
+      // For a series there can be several downloads under the same (series) id, plus stale rows whose
+      // file was deleted. Pick the row whose source URL matches THIS item's files (the right episode),
+      // then any same-item row — but only when the file is actually present on disk. Otherwise fall
+      // through to streaming instead of handing AVPlayer a missing file (the "crossed-out play" icon).
+      let playURLs = Set(playItem.files.map { $0.url.http })
+      let chosen = sameItem.first(where: { playURLs.contains($0.originalURL.absoluteString) }) ?? sameItem.first
+      if let chosen, FileManager.default.fileExists(atPath: chosen.localFileURL.path) {
+        return chosen.localFileURL
       }
       let urlString = BestVideoQualityFinder.findBestURL(for: playItem.files)
       guard !urlString.isEmpty, let url = URL(string: urlString) else { return nil }

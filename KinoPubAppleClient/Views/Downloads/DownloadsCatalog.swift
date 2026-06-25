@@ -49,16 +49,17 @@ class DownloadsCatalog: ObservableObject {
   
   func deleteDownloadedItem(at indexSet: IndexSet) {
     for index in indexSet {
-      let item = downloadedItems[index]
-      downloadsDatabase.remove(fileInfo: item)
+      downloadsDatabase.remove(fileInfo: downloadedItems[index])
     }
+    // Mutate the published array too, so `isEmpty` flips and the placeholder shows once all are gone.
+    downloadedItems.remove(atOffsets: indexSet)
   }
-  
+
   func deleteActiveDownload(at indexSet: IndexSet) {
     for index in indexSet {
-      let item = activeDownloads[index]
-      downloadManager.removeDownload(for: item.url)
+      downloadManager.removeDownload(for: activeDownloads[index].url)
     }
+    activeDownloads.remove(atOffsets: indexSet)
   }
   
   func toggle(download: Download<DownloadMeta>) {

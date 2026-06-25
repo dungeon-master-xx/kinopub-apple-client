@@ -149,6 +149,10 @@ struct SearchView: View {
   var resultsContent: some View {
     VStack(alignment: .leading, spacing: 12) {
       scopeTabBar
+      if let people = matchedPeopleForScope, !people.isEmpty {
+        peopleStrip(people)
+        Divider().background(Color.white.opacity(0.08))
+      }
       LazyVGrid(columns: resultsColumns, spacing: 16) {
         ForEach(model.results(for: model.scope), id: \.id) { item in
           if item.skeleton ?? false {
@@ -190,16 +194,69 @@ struct SearchView: View {
     } label: {
       HStack(spacing: 6) {
         Text(scope.title.localized)
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(isSelected ? Color.white : Color.KinoPub.text)
         Text("\(model.count(for: scope))")
-          .foregroundStyle(isSelected ? Color.white.opacity(0.85) : Color.KinoPub.subtitle)
+          .font(.system(size: 11, weight: .bold))
+          .monospacedDigit()
+          .padding(.horizontal, 6)
+          .padding(.vertical, 1)
+          .background(Capsule().fill(isSelected ? Color.white.opacity(0.25) : Color.KinoPub.accent.opacity(0.22)))
+          .foregroundStyle(isSelected ? Color.white : Color.KinoPub.accent)
       }
-      .font(.system(size: 13, weight: .semibold))
-      .foregroundStyle(isSelected ? Color.white : Color.KinoPub.text)
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
       .background(Capsule().fill(isSelected ? Color.KinoPub.accent : Color.white.opacity(0.1)))
     }
     .buttonStyle(.plain)
+  }
+
+  // MARK: - Matched people (circles above the Actors / Directors results)
+
+  /// The people matched for the current tab, or nil for tabs that don't show a people strip.
+  private var matchedPeopleForScope: [TMDBPerson]? {
+    switch model.scope {
+    case .cast: return model.matchedActors
+    case .director: return model.matchedDirectors
+    case .all, .title: return nil
+    }
+  }
+
+  private func peopleStrip(_ people: [TMDBPerson]) -> some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(alignment: .top, spacing: 14) {
+        ForEach(people) { person in
+          NavigationLink(value: Route.personSearch(person.name,
+                                                   model.scope.field ?? "cast",
+                                                   person.name)) {
+            VStack(spacing: 6) {
+              personAvatar(person.imageURL)
+              Text(person.name)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.KinoPub.text)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .frame(width: 72)
+            }
+          }
+          .buttonStyle(.plain)
+        }
+      }
+      .padding(.vertical, 2)
+    }
+  }
+
+  private func personAvatar(_ url: URL?) -> some View {
+    CachedAsyncImage(url: url) { image in
+      image.resizable().scaledToFill()
+    } placeholder: {
+      ZStack {
+        Color.KinoPub.skeleton
+        Image(systemName: "person.fill").foregroundStyle(Color.KinoPub.subtitle)
+      }
+    }
+    .frame(width: 64, height: 64)
+    .clipShape(Circle())
   }
 
 }

@@ -22,8 +22,18 @@ enum TMDBPersonRole {
   }
 }
 
+/// A person matched on TMDB (used to show "which actors/directors matched" in search).
+struct TMDBPerson: Identifiable, Hashable {
+  let id: Int
+  let name: String
+  let imageURL: URL?
+}
+
 protocol TMDBService {
   func personImageURL(for name: String, role: TMDBPersonRole) async -> URL?
+  /// People matching `query` whose known-for department is `role` (e.g. the actual actors/directors
+  /// behind a name search), most-popular first.
+  func people(matching query: String, role: TMDBPersonRole) async -> [TMDBPerson]
 }
 
 extension TMDBService {
@@ -98,12 +108,43 @@ final class TMDBServiceImpl: TMDBService {
     return nil
   }
 
+  func people(matching query: String, role: TMDBPersonRole) async -> [TMDBPerson] {
+    let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, !apiKey.isEmpty else { return [] }
+
+    guard var components = URLComponents(string: "https://api.themoviedb.org/3/search/person") else { return [] }
+    components.queryItems = [
+      URLQueryItem(name: "api_key", value: apiKey),
+      URLQueryItem(name: "query", value: trimmed),
+      URLQueryItem(name: "include_adult", value: "false")
+    ]
+    guard let url = components.url else { return [] }
+
+    do {
+      let (data, _) = try await session.data(from: url)
+      let response = try JSONDecoder().decode(PersonSearchResponse.self, from: data)
+      return response.results
+        .filter { $0.knownForDepartment == role.department }
+        .prefix(12)
+        .map { person in
+          let imageURL = person.profilePath.flatMap { URL(string: "https://image.tmdb.org/t/p/w185\($0)") }
+          return TMDBPerson(id: person.id, name: person.name, imageURL: imageURL)
+        }
+    } catch {
+      return []
+    }
+  }
+
   private struct PersonSearchResponse: Decodable {
     let results: [Person]
     struct Person: Decodable {
+      let id: Int
+      let name: String
       let profilePath: String?
       let knownForDepartment: String?
       enum CodingKeys: String, CodingKey {
+        case id
+        case name
         case profilePath = "profile_path"
         case knownForDepartment = "known_for_department"
       }
@@ -113,4 +154,5 @@ final class TMDBServiceImpl: TMDBService {
 
 struct TMDBServiceMock: TMDBService {
   func personImageURL(for name: String, role: TMDBPersonRole) async -> URL? { nil }
+  func people(matching query: String, role: TMDBPersonRole) async -> [TMDBPerson] { [] }
 }

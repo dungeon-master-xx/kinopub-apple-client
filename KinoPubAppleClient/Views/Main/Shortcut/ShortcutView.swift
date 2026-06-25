@@ -18,14 +18,22 @@ struct SortSelectionView: View {
   var body: some View {
     NavigationStack {
       Form {
-        Section("Sort".localized) {
-          Picker("Sort".localized, selection: $sort) {
-            ForEach(SortOption.allCases) { option in
+        ForEach(SortOption.allCases) { option in
+          Button {
+            sort = option
+            dismiss()
+          } label: {
+            HStack {
               Text(option.titleKey.localized)
-                .tag(option)
+                .foregroundStyle(Color.KinoPub.text)
+              Spacer()
+              if sort == option {
+                Image(systemName: "checkmark")
+                  .foregroundStyle(Color.KinoPub.accent)
+                  .fontWeight(.semibold)
+              }
             }
           }
-          .pickerStyle(.inline)
         }
       }
       .formStyle(.grouped)
