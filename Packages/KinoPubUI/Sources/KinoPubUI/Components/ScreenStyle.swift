@@ -53,6 +53,18 @@ public extension View {
     self
 #endif
   }
+
+  /// Wraps content in a floating capsule "island": real Liquid Glass on OS 26, an ultra-thin material
+  /// capsule on older systems. Use for pinned/sticky section headers so they read as Apple-style
+  /// floating islands over the scrolling content instead of a flat opaque bar.
+  @ViewBuilder
+  func glassCapsule() -> some View {
+    if #available(iOS 26.0, macOS 26.0, *) {
+      self.glassEffect(.regular, in: Capsule())
+    } else {
+      self.background(.ultraThinMaterial, in: Capsule())
+    }
+  }
 }
 
 private struct KinoScreenModifier: ViewModifier {
