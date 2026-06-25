@@ -156,38 +156,22 @@ class HomeModel: ObservableObject {
     continueWatchingLoading = false
   }
 
-  /// Builds a Continue Watching entry from a fully-loaded media item.
+  /// Builds a Continue Watching entry from a fully-loaded media item. Series use the same
+  /// `MediaItem.continueEpisode()` logic as the detail page so the two stay in sync (DRY).
   nonisolated private static func continueItem(from item: MediaItem) -> ContinueItem {
-    if item.isSeries, let seasons = item.seasons,
-       let target = lastWatchingEpisode(in: seasons) {
-      let progress = target.episode.duration > 0
-        ? min(max(Double(target.episode.watching.time) / Double(target.episode.duration), 0), 1)
+    if item.isSeries, let target = item.continueEpisode() ?? item.orderedEpisodes.last {
+      let episode = target.episode
+      let progress: Double? = (episode.duration > 0 && episode.watching.time > 0)
+        ? min(max(Double(episode.watching.time) / Double(episode.duration), 0), 1)
         : nil
-      let subtitle = "S\(target.season.number) · E\(target.episode.number)"
-      return ContinueItem(id: item.id, item: item, progress: progress, subtitle: subtitle)
+      return ContinueItem(id: item.id, item: item, progress: progress,
+                          subtitle: "S\(target.season.number) · E\(episode.number)")
     }
     if let video = item.videos?.first, video.duration > 0, video.watching.time > 0 {
       let progress = min(max(Double(video.watching.time) / Double(video.duration), 0), 1)
       return ContinueItem(id: item.id, item: item, progress: progress, subtitle: item.duration.totalFormatted)
     }
     return ContinueItem(id: item.id, item: item, progress: nil, subtitle: item.duration.totalFormatted)
-  }
-
-  /// The most recent in-progress episode across all seasons.
-  nonisolated private static func lastWatchingEpisode(in seasons: [Season]) -> (season: Season, episode: Episode)? {
-    var best: (season: Season, episode: Episode)?
-    for season in seasons {
-      for episode in season.episodes where episode.watching.time > 0 {
-        if let current = best {
-          if (season.number, episode.number) > (current.season.number, current.episode.number) {
-            best = (season, episode)
-          }
-        } else {
-          best = (season, episode)
-        }
-      }
-    }
-    return best
   }
 
   private static func skeletonShelves() -> [Shelf] {

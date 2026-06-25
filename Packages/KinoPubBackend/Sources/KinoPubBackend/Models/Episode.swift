@@ -57,6 +57,16 @@ public class Episode: Codable, Hashable, Identifiable {
   }
 }
 
+public extension Episode {
+  /// "Finished": remaining time is within a small threshold (~8% of length, clamped 60...180s),
+  /// so Continue should offer the next episode rather than this one's tail.
+  var isWatchedToEnd: Bool {
+    guard duration > 0, watching.time > 0 else { return false }
+    let threshold = min(max(Int(Double(duration) * 0.08), 60), 180)
+    return watching.time >= duration - threshold
+  }
+}
+
 extension Episode: PlayableItem {
   public var trailer: Trailer? { nil }
   public var metadata: WatchingMetadata {

@@ -289,39 +289,11 @@ struct MediaItemView: View {
     }
   }
 
-  // MARK: - Continue ("Netflix-style") resume logic
+  // MARK: - Continue ("Netflix-style") resume logic — shared with Home via MediaItem.continueEpisode()
 
-  /// Ordered (season, episode) pairs used to compute what to continue.
-  private var orderedEpisodes: [(season: Season, episode: Episode)] {
-    (mediaItem.seasons ?? [])
-      .sorted { $0.number < $1.number }
-      .flatMap { season in season.episodes.sorted { $0.number < $1.number }.map { (season, $0) } }
-  }
-
-  /// The series episode to continue: the in-progress one, else the episode right after the
-  /// last fully-watched one. Nil when there's nothing started / everything is finished.
+  /// The series episode to continue (shared logic with the Home shelf).
   private var continueTarget: (season: Season, episode: Episode)? {
-    let ordered = orderedEpisodes
-    guard let idx = ordered.lastIndex(where: { $0.episode.watching.time > 0 || $0.episode.watched > 0 }) else {
-      return nil
-    }
-    let entry = ordered[idx]
-    // If that episode is finished (marked watched, or watched to near the end), jump to the next.
-    if entry.episode.watched > 0 || Self.isFinished(entry.episode) {
-      let next = idx + 1
-      return next < ordered.count ? ordered[next] : nil
-    }
-    return entry
-  }
-
-  /// An episode counts as "finished" once the remaining time is within a small threshold
-  /// (~8% of its length, clamped to 60...180s) — so we offer the next one, not the very end.
-  private static func isFinished(_ episode: Episode) -> Bool {
-    let duration = episode.duration
-    let time = episode.watching.time
-    guard duration > 0, time > 0 else { return false }
-    let threshold = min(max(Int(Double(duration) * 0.08), 60), 180)
-    return time >= duration - threshold
+    mediaItem.continueEpisode()
   }
 
   /// Whether the play button should read "Continue" rather than "Play"/"Watch".
