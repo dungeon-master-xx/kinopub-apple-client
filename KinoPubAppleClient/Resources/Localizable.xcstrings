@@ -4222,6 +4222,22 @@
           }
         }
       }
+    },
+    "Couldn't start download": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't start download"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось начать загрузку"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
