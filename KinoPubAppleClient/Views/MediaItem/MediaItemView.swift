@@ -144,6 +144,9 @@ struct MediaItemView: View {
 
         MetadataRow(items: heroBadges)
 
+        // Reuse the КП / IMDb badges from the tiles in the hero.
+        ContentItemRatingView(imdbScore: mediaItem.imdbRating, kinopoiskScore: mediaItem.kinopoiskRating)
+
         heroActions
           .padding(.top, 6)
       }
@@ -164,21 +167,18 @@ struct MediaItemView: View {
     if mediaItem.year > 0 {
       items.append(.init(text: "\(mediaItem.year)", isBadge: false))
     }
-    let duration = mediaItem.duration.totalFormatted
-    if !duration.isEmpty {
-      items.append(.init(text: duration, isBadge: false))
+    // Movies show their runtime in the hero; for series the durations live in the info block below.
+    if !mediaItem.isSeries {
+      let duration = mediaItem.duration.totalFormatted
+      if !duration.isEmpty {
+        items.append(.init(text: duration, isBadge: false))
+      }
     }
     if let quality = qualityBadgeText {
       items.append(.init(text: quality, isBadge: true))
     }
     if let ac3 = mediaItem.ac3, ac3 > 0 {
       items.append(.init(text: "AC3", isBadge: true))
-    }
-    if let imdbRating = mediaItem.imdbRating, imdbRating > 0 {
-      items.append(.init(text: "IMDb \(String(format: "%.1f", imdbRating))", isBadge: false))
-    }
-    if let kinopoiskRating = mediaItem.kinopoiskRating, kinopoiskRating > 0 {
-      items.append(.init(text: "KP \(String(format: "%.1f", kinopoiskRating))", isBadge: false))
     }
     return items
   }
@@ -790,18 +790,67 @@ private struct MediaItemInfoSection: View {
         }
       }
 
-      if let imdbRating = mediaItem.imdbRating {
-        ratingRow(label: "IMDb",
-                  value: String(format: "%.1f", imdbRating),
-                  url: imdbURL)
+      if (mediaItem.imdbRating ?? 0) > 0 || (mediaItem.kinopoiskRating ?? 0) > 0 {
+        VStack(alignment: .leading, spacing: 4) {
+          Text("Rating".localized.uppercased())
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(Color.KinoPub.subtitle)
+          RatingsDetailRow(imdbScore: mediaItem.imdbRating,
+                           imdbVotes: mediaItem.imdbVotes,
+                           kinopoiskScore: mediaItem.kinopoiskRating,
+                           kinopoiskVotes: mediaItem.kinopoiskVotes)
+        }
       }
 
-      if let kinopoiskRating = mediaItem.kinopoiskRating {
-        ratingRow(label: "Kinopoisk",
-                  value: String(format: "%.1f", kinopoiskRating),
-                  url: kinopoiskURL)
+      if mediaItem.isSeries {
+        infoRow(label: "Status".localized, value: statusValue)
+        if let total = totalValue {
+          infoRow(label: "Total".localized, value: total)
+        }
+        infoRow(label: "Duration".localized, value: durationValue)
       }
     }
+  }
+
+  // MARK: - Series info helpers
+
+  private var statusValue: String {
+    mediaItem.finished ? "Finished".localized : "Ongoing".localized
+  }
+
+  private var totalValue: String? {
+    guard let seasons = mediaItem.seasons, !seasons.isEmpty else { return nil }
+    let episodes = seasons.reduce(0) { $0 + $1.episodes.count }
+    return "\(seasons.count) \("seasons".localized), \(episodes) \("episodes".localized)"
+  }
+
+  private var durationValue: String {
+    let average = mediaItem.duration.average
+    let total = mediaItem.duration.total
+    var parts: [String] = []
+    if average > 0 {
+      let minutes = Int(average / 60)
+      parts.append("≈ \(MediaItemInfoSection.clock(average)) (\(minutes) \("min".localized))")
+    }
+    if total > 0 {
+      parts.append("\("total".localized): \(MediaItemInfoSection.abbreviated(total))")
+    }
+    return parts.joined(separator: ", ")
+  }
+
+  private static func clock(_ seconds: Double) -> String {
+    let formatter = DateComponentsFormatter()
+    formatter.allowedUnits = [.hour, .minute, .second]
+    formatter.unitsStyle = .positional
+    formatter.zeroFormattingBehavior = .pad
+    return formatter.string(from: seconds) ?? ""
+  }
+
+  private static func abbreviated(_ seconds: Double) -> String {
+    let formatter = DateComponentsFormatter()
+    formatter.allowedUnits = [.day, .hour, .minute]
+    formatter.unitsStyle = .abbreviated
+    return formatter.string(from: seconds) ?? ""
   }
 
   // MARK: - Languages
