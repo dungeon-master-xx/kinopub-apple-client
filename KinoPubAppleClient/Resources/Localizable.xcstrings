@@ -3530,6 +3530,22 @@
           }
         }
       }
+    },
+    "Saved to %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved to %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранено в «%@»"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

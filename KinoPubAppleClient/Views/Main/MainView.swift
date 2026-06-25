@@ -116,7 +116,7 @@ struct MainView: View {
       }
       .handleError(state: $errorHandler.state)
       .task {
-        await catalog.fetchItems()
+        await catalog.initialFetch()
       }
       // The deep-link filter is already captured by the catalog above; clear it so a later
       // manual selection of this section isn't unexpectedly pre-filtered.
@@ -225,7 +225,7 @@ struct FilteredCatalogView: View {
                  })
     }
     .task {
-      await catalog.fetchItems()
+      await catalog.initialFetch()
     }
     .handleError(state: $errorHandler.state)
   }

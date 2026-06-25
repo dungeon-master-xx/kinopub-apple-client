@@ -75,6 +75,7 @@ struct BookmarksView: View {
               ForEach(items) { item in
                 NavigationLink(value: BookmarksRoutes.details(item)) {
                   PosterCard(imageURL: item.posters.medium,
+                             title: item.localizedTitle,
                              imdbRating: item.imdbRating,
                              kinopoiskRating: item.kinopoiskRating)
                 }

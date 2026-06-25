@@ -79,7 +79,15 @@ class MediaCatalog: ObservableObject {
     }
   }
 
-  private func handleData(_ data: PaginatedData<MediaItem>) {    
+  /// Initial appearance load. Once the catalog already holds a page, this returns immediately,
+  /// so returning from a pushed detail neither refetches (losing scroll) nor appends a page.
+  @MainActor
+  func initialFetch() async {
+    guard pagination == nil else { return }
+    await fetchItems()
+  }
+
+  private func handleData(_ data: PaginatedData<MediaItem>) {
     if items.first(where: { $0.skeleton ?? false }) != nil {
       items = data.items
     } else {

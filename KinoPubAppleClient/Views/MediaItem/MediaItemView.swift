@@ -92,6 +92,7 @@ struct MediaItemView: View {
     .background(Color.KinoPub.background)
     // Let the hero cover bleed up under the (transparent) navigation bar.
     .ignoresSafeArea(edges: .top)
+    .toast(message: $itemModel.toastMessage)
     #if os(iOS)
     .toolbar(.hidden, for: .tabBar)
     .toolbarBackground(.hidden, for: .navigationBar)
@@ -242,7 +243,7 @@ struct MediaItemView: View {
       Menu {
         ForEach(itemModel.bookmarkFolders) { folder in
           Button(folder.title) {
-            itemModel.toggleBookmark(folderId: folder.id)
+            itemModel.toggleBookmark(folderId: folder.id, folderTitle: folder.title)
           }
         }
       } label: {

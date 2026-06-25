@@ -38,7 +38,11 @@ class PlayerManager: ObservableObject {
   #if !os(macOS)
   private func externalMetadata() -> [AVMetadataItem] {
     var items: [AVMetadataItem] = []
-    let title = playItem.playerTitle
+    // For a trailer, make it explicit in the player's title.
+    var title = playItem.playerTitle
+    if watchMode == .trailer, !title.isEmpty {
+      title += " — \("Trailer".localized)"
+    }
     if !title.isEmpty {
       let titleItem = AVMutableMetadataItem()
       titleItem.identifier = .commonIdentifierTitle

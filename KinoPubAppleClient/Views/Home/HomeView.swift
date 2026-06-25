@@ -196,6 +196,7 @@ struct HomeView: View {
       ForEach(shelf.items) { item in
         NavigationLink(value: MainRoutes.details(item)) {
           PosterCard(imageURL: item.posters.medium,
+                     title: item.localizedTitle,
                      imdbRating: item.imdbRating,
                      kinopoiskRating: item.kinopoiskRating)
         }
