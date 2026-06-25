@@ -106,7 +106,14 @@ class SearchModel: ObservableObject {
     pagedQuery = trimmed
 
     do {
-      let data = try await contentService.search(query: trimmed, contentType: nil, field: searchField, page: nil)
+      var data = try await contentService.search(query: trimmed, contentType: nil, field: searchField, page: nil)
+      // General search: if nothing matched by title, fall back to a cast (people) search so
+      // typing an actor's or director's name finds their titles too.
+      if data.items.isEmpty, searchField == nil {
+        data = try await contentService.search(query: trimmed, contentType: nil, field: "cast", page: nil)
+      }
+      // Guard against a query change while the request(s) were in flight.
+      guard trimmed == pagedQuery else { return }
       results = data.items
       pagination = data.pagination
     } catch {

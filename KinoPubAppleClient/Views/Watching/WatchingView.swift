@@ -60,10 +60,8 @@ struct WatchingView: View {
   @ViewBuilder
   var content: some View {
     if model.isLoading {
-      Spacer()
-      ProgressView()
-        .tint(Color.KinoPub.accent)
-      Spacer()
+      // Same poster-placeholder grid as the catalogs, so the loading skeleton is consistent.
+      skeletonGrid
     } else if model.serials.isEmpty {
       EmptyStateView(systemImage: "play.tv", title: "No series here yet".localized)
     } else {
@@ -71,9 +69,13 @@ struct WatchingView: View {
     }
   }
 
+  private var gridColumns: [GridItem] {
+    [GridItem(.adaptive(minimum: 150), spacing: 16, alignment: .top)]
+  }
+
   var serialsGrid: some View {
     ScrollView {
-      LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 16, alignment: .top)], spacing: 24) {
+      LazyVGrid(columns: gridColumns, spacing: 24) {
         ForEach(model.serials) { serial in
           NavigationLink(value: Route.detailsByID(serial.id)) {
             WatchingSerialView(serial: serial)
@@ -88,6 +90,18 @@ struct WatchingView: View {
     }
     .refreshable {
       await model.refresh()
+    }
+  }
+
+  private var skeletonGrid: some View {
+    ScrollView {
+      LazyVGrid(columns: gridColumns, spacing: 24) {
+        ForEach(0..<12, id: \.self) { _ in
+          PosterCard.placeholder(width: 150)
+        }
+      }
+      .padding(.horizontal, 20)
+      .padding(.top, 8)
     }
   }
 }
