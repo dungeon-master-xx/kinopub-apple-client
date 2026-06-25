@@ -21,6 +21,8 @@ struct SportView: View {
   @State private var selectedChannel: TVChannel?
   // Shares the app-wide Route type so the detail column never mismatches path types on switch.
   @State private var path: [Route] = []
+  /// When pushed inside the custom "Ещё" stack, render bare (the More tab provides the stack).
+  @Environment(\.sectionEmbedded) private var sectionEmbedded
 
   // Compact (iPhone) grid — small tiles, ~2× more per row than the old layout.
   private let gridColumns = [GridItem(.adaptive(minimum: 140), spacing: 14, alignment: .top)]
@@ -39,15 +41,21 @@ struct SportView: View {
   }
 
   var body: some View {
-    NavigationStack(path: $path) {
-      content
-        .kinoScreen("Sport".localized)
-        .moreBackButton()
-        .task { await model.fetchChannels() }
-        .refreshable { await model.refresh() }
-        .routeDestinations()
-        .handleError(state: $errorHandler.state)
+    if sectionEmbedded {
+      sectionContent
+    } else {
+      NavigationStack(path: $path) {
+        sectionContent.routeDestinations()
+      }
     }
+  }
+
+  private var sectionContent: some View {
+    content
+      .kinoScreen("Sport".localized)
+      .task { await model.fetchChannels() }
+      .refreshable { await model.refresh() }
+      .handleError(state: $errorHandler.state)
   }
 
   @ViewBuilder

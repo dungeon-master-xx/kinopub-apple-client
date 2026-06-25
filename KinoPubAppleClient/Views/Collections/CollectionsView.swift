@@ -15,6 +15,7 @@ struct CollectionsView: View {
   @EnvironmentObject var errorHandler: ErrorHandler
   @Environment(\.appContext) var appContext
   @StateObject private var model: CollectionsModel
+  @Environment(\.sectionEmbedded) private var sectionEmbedded
 
   private let gridColumns = [GridItem(.adaptive(minimum: 200), spacing: 16, alignment: .top)]
 
@@ -23,15 +24,21 @@ struct CollectionsView: View {
   }
 
   var body: some View {
-    NavigationStack(path: $navigationState.collectionsRoutes) {
-      content
-        .kinoScreen("Collections".localized)
-        .moreBackButton()
-        .task { await model.fetchCollections() }
-        .refreshable { await model.refresh() }
-        .routeDestinations()
-        .handleError(state: $errorHandler.state)
+    if sectionEmbedded {
+      sectionContent
+    } else {
+      NavigationStack(path: $navigationState.collectionsRoutes) {
+        sectionContent.routeDestinations()
+      }
     }
+  }
+
+  private var sectionContent: some View {
+    content
+      .kinoScreen("Collections".localized)
+      .task { await model.fetchCollections() }
+      .refreshable { await model.refresh() }
+      .handleError(state: $errorHandler.state)
   }
 
   @ViewBuilder

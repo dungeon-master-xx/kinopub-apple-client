@@ -24,14 +24,22 @@ struct ProfileView: View {
 
   @State private var showLogoutAlert: Bool = false
   @State private var cacheSize: String = ImageCache.shared.formattedDiskUsage()
-    
+  @Environment(\.sectionEmbedded) private var sectionEmbedded
+
   init(model: @autoclosure @escaping () -> ProfileModel) {
     _model = StateObject(wrappedValue: model())
   }
   
   var body: some View {
-    NavigationStack {
-      ZStack {
+    if sectionEmbedded {
+      profileContent
+    } else {
+      NavigationStack { profileContent }
+    }
+  }
+
+  private var profileContent: some View {
+    ZStack {
         Color.KinoPub.background.edgesIgnoringSafeArea(.all)
         VStack(alignment: .leading) {
           Form {
@@ -89,7 +97,6 @@ struct ProfileView: View {
         }
       }
       .kinoScreen("Profile".localized)
-      .moreBackButton()
       .onAppear(perform: {
         model.fetch()
       })
@@ -107,7 +114,6 @@ struct ProfileView: View {
           secondaryButton: .cancel()
         )
       }
-    }
   }
   private var tmdbSection: some View {
     Section(header: Text("TMDB"),

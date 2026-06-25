@@ -19,31 +19,38 @@ struct WatchingView: View {
   // Local path: "New episodes" and "Watching" are two top-level screens — each owns its own
   // navigation stack so they never share one path binding (which would crash on switch).
   @State private var path: [Route] = []
+  @Environment(\.sectionEmbedded) private var sectionEmbedded
 
   init(model: @autoclosure @escaping () -> WatchingModel) {
     _model = StateObject(wrappedValue: model())
   }
 
   var body: some View {
-    NavigationStack(path: $path) {
-      // One scroll view with the chips as the first scrolling element, so the large title collapses
-      // on scroll like every other screen.
-      ScrollView {
-        if model.tab == .newEpisodes {
-          episodesTypePicker
-            .padding(.bottom, 4)
-        }
-        gridBody
+    if sectionEmbedded {
+      sectionContent
+    } else {
+      NavigationStack(path: $path) {
+        sectionContent.routeDestinations()
       }
-      .refreshable { await model.refresh() }
-      .kinoScreen((model.tab == .newEpisodes ? "New episodes" : "Watching").localized)
-      .moreBackButton()
-      .task {
-        await model.fetchItems()
-      }
-      .routeDestinations()
-      .handleError(state: $errorHandler.state)
     }
+  }
+
+  private var sectionContent: some View {
+    // One scroll view with the chips as the first scrolling element, so the large title collapses
+    // on scroll like every other screen.
+    ScrollView {
+      if model.tab == .newEpisodes {
+        episodesTypePicker
+          .padding(.bottom, 4)
+      }
+      gridBody
+    }
+    .refreshable { await model.refresh() }
+    .kinoScreen((model.tab == .newEpisodes ? "New episodes" : "Watching").localized)
+    .task {
+      await model.fetchItems()
+    }
+    .handleError(state: $errorHandler.state)
   }
 
   @ViewBuilder

@@ -15,24 +15,30 @@ struct BookmarksView: View {
   @EnvironmentObject var errorHandler: ErrorHandler
   @Environment(\.appContext) var appContext
   @StateObject private var catalog: BookmarksCatalog
-  
+  @Environment(\.sectionEmbedded) private var sectionEmbedded
+
   init(catalog: @autoclosure @escaping () -> BookmarksCatalog) {
     _catalog = StateObject(wrappedValue: catalog())
   }
-  
+
   var body: some View {
-    NavigationStack(path: $navigationState.bookmarksRoutes) {
-      bookmarksList
+    if sectionEmbedded {
+      sectionContent
+    } else {
+      NavigationStack(path: $navigationState.bookmarksRoutes) {
+        sectionContent.routeDestinations()
+      }
+    }
+  }
+
+  private var sectionContent: some View {
+    bookmarksList
       .kinoScreen("Bookmarks".localized)
-      .moreBackButton()
       .refreshable(action: catalog.refresh)
       .task {
         await catalog.fetchItems()
       }
-      .routeDestinations()
       .handleError(state: $errorHandler.state)
-    }
-    
   }
   
   var bookmarksList: some View {

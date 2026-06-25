@@ -11,47 +11,28 @@ import KinoPubUI
 import KinoPubBackend
 import KinoPubKit
 
-// MARK: - "Back to Еще" affordance
+// MARK: - Embedded sections
 //
-// The custom "Ещё" tab swaps the chosen section in as the tab's own content, so the section keeps
-// its single navigation bar (no double bar like the system "More" produced). MoreView publishes a
-// back action through the environment; each top-level screen renders it as a leading bar button via
-// `.moreBackButton()` — nil on the bottom-bar tabs, so they show no back button.
+// The custom "Ещё" tab is a real NavigationStack that PUSHES the chosen section (so swipe-back and a
+// single collapsing nav bar work natively). A pushed section must not wrap itself in its own
+// NavigationStack — `\.sectionEmbedded` tells it to render bare and rely on the More tab's stack.
 
-private struct MoreBackActionKey: EnvironmentKey {
-  static let defaultValue: (() -> Void)? = nil
+private struct SectionEmbeddedKey: EnvironmentKey {
+  static let defaultValue = false
 }
 
 extension EnvironmentValues {
-  var moreBackAction: (() -> Void)? {
-    get { self[MoreBackActionKey.self] }
-    set { self[MoreBackActionKey.self] = newValue }
+  /// True when a top-level screen is pushed inside the custom "Ещё" stack (render without an own stack).
+  var sectionEmbedded: Bool {
+    get { self[SectionEmbeddedKey.self] }
+    set { self[SectionEmbeddedKey.self] = newValue }
   }
 }
 
 extension View {
-  /// Adds a leading "‹ Ещё" button when presented inside the custom More tab (no-op otherwise).
-  func moreBackButton() -> some View { modifier(MoreBackButtonModifier()) }
-}
-
-private struct MoreBackButtonModifier: ViewModifier {
-  @Environment(\.moreBackAction) private var moreBackAction
-
-  func body(content: Content) -> some View {
-#if os(iOS)
-    content.toolbar {
-      if let moreBackAction {
-        ToolbarItem(placement: .topBarLeading) {
-          Button(action: moreBackAction) {
-            Label("More".localized, systemImage: "chevron.left")
-          }
-        }
-      }
-    }
-#else
-    content
-#endif
-  }
+  /// Retained for call-site compatibility; the custom More now uses real push navigation, so the
+  /// system supplies the back button and this is a no-op.
+  func moreBackButton() -> some View { self }
 }
 
 struct TabsNavigationView: View {
@@ -219,77 +200,79 @@ struct MoreView: View {
   @EnvironmentObject private var authState: AuthState
   @EnvironmentObject private var networkMonitor: NetworkMonitor
 
-  @State private var selected: SidebarItem?
+  /// Real navigation path (type-erased so it can hold both SidebarItem section pushes and Route
+  /// detail pushes from inside the embedded sections).
+  @State private var path = NavigationPath()
 
-  /// Rows mirror the iPad sidebar's Library + Other groups (Home/Search live in the bottom bar).
-  private var libraryRows: [SidebarItem] {
-    SidebarItem.libraryCategories.map { .category($0) } + [.sport, .collections]
-  }
   private var otherRows: [SidebarItem] { [.newEpisodes, .watching, .bookmarks, .downloads] }
 
   var body: some View {
-    Group {
-      if let selected {
-        sectionView(selected)
-          .environment(\.moreBackAction, { withAnimation { self.selected = nil } })
-      } else {
-        NavigationStack {
-          List {
-            Section("Library".localized) { ForEach(libraryRows) { row($0) } }
-            Section("Other".localized) { ForEach(otherRows) { row($0) } }
-            Section { row(.profile) }
-          }
-#if os(iOS)
-          .listStyle(.insetGrouped)
-#endif
-          .scrollContentBackground(.hidden)
-          .kinoScreen("More".localized)
+    NavigationStack(path: $path) {
+      List {
+        Section("Library".localized) {
+          ForEach(SidebarItem.libraryCategories, id: \.self) { type in categoryRow(type) }
+          sectionRow(.sport)
+          sectionRow(.collections)
         }
+        Section("Other".localized) {
+          ForEach(otherRows) { sectionRow($0) }
+        }
+        Section { sectionRow(.profile) }
       }
+#if os(iOS)
+      .listStyle(.insetGrouped)
+#endif
+      .scrollContentBackground(.hidden)
+      .kinoScreen("More".localized)
+      // Sections push as bare content onto this one stack (swipe-back + single bar). Details pushed
+      // from inside them are Route values handled by .routeDestinations().
+      .navigationDestination(for: SidebarItem.self) { item in
+        sectionView(item).environment(\.sectionEmbedded, true)
+      }
+      .routeDestinations()
     }
-    // Offline: open Downloads automatically (the only fully-available section).
+    // Offline: jump straight to Downloads (the only fully-available section).
     .onChange(of: networkMonitor.isOnline) { online in
-      if !online { selected = .downloads }
-      else if selected != nil && selected?.isAvailableOffline == false { selected = nil }
+      if !online { path = NavigationPath([SidebarItem.downloads]) }
     }
     .onAppear {
-      if !networkMonitor.isOnline { selected = .downloads }
+      if !networkMonitor.isOnline, path.isEmpty { path.append(SidebarItem.downloads) }
     }
   }
 
-  @ViewBuilder
-  private func row(_ item: SidebarItem) -> some View {
-    let locked = !networkMonitor.isOnline && !item.isAvailableOffline
-    Button {
-      guard !locked else { return }
-      withAnimation { selected = item }
-    } label: {
-      HStack {
-        Label(item.title.localized, systemImage: item.systemImage)
-        Spacer()
-        if locked {
-          Image(systemName: "lock.fill").font(.caption2)
-        } else {
-          Image(systemName: "chevron.right").font(.caption2)
-        }
-      }
-      .foregroundStyle(locked ? Color.KinoPub.subtitle : Color.KinoPub.text)
-      .contentShape(Rectangle())
+  /// A library category opens the shared bare filtered-catalog screen (no nested stack).
+  private func categoryRow(_ type: MediaType) -> some View {
+    let locked = !networkMonitor.isOnline
+    return NavigationLink(value: Route.filteredCatalog(MediaItemsFilter(contentType: type, genres: [], countries: [], year: nil, age: nil, sort: nil), type.title.localized)) {
+      rowLabel(type.title.localized, systemImage: type.systemImage, locked: locked)
     }
-    .buttonStyle(.plain)
+    .disabled(locked)
     .listRowBackground(Color.KinoPub.background)
+  }
+
+  private func sectionRow(_ item: SidebarItem) -> some View {
+    let locked = !networkMonitor.isOnline && !item.isAvailableOffline
+    return NavigationLink(value: item) {
+      rowLabel(item.title.localized, systemImage: item.systemImage, locked: locked)
+    }
+    .disabled(locked)
+    .listRowBackground(Color.KinoPub.background)
+  }
+
+  private func rowLabel(_ title: String, systemImage: String, locked: Bool) -> some View {
+    HStack {
+      Label(title, systemImage: systemImage)
+      if locked {
+        Spacer()
+        Image(systemName: "lock.fill").font(.caption2)
+      }
+    }
+    .foregroundStyle(locked ? Color.KinoPub.subtitle : Color.KinoPub.text)
   }
 
   @ViewBuilder
   private func sectionView(_ item: SidebarItem) -> some View {
     switch item {
-    case .category(let type):
-      MainView(catalog: MediaCatalog(itemsService: appContext.contentService,
-                                     authState: authState,
-                                     errorHandler: errorHandler,
-                                     contentType: type,
-                                     shortcut: .hot,
-                                     filter: nil))
     case .sport:
       SportView(model: SportModel(itemsService: appContext.contentService,
                                   authState: authState,
