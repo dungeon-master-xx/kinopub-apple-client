@@ -67,9 +67,7 @@ struct DownloadsView: View {
   var downloadedFilesList: some View {
     ForEach(catalog.downloadedItems, id: \.originalURL) { fileInfo in
       NavigationLink(value: Route.player(fileInfo.metadata)) {
-        DownloadedItemView(mediaItem: fileInfo.metadata, progress: nil) { paused in
-          
-        }
+        DownloadedItemView(mediaItem: fileInfo.metadata, progress: nil, fileURL: fileInfo.localFileURL) { _ in }
       }
     }
     .onDelete(perform: { indexSet in

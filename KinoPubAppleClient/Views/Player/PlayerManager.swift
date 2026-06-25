@@ -71,7 +71,11 @@ class PlayerManager: ObservableObject {
     switch watchMode {
     case .media:
       let downloadedFiles = downloadedFilesDatabase.readData()
-      if let file = downloadedFiles?.filter({ $0.metadata.id == playItem.id }).first {
+      // Prefer a fully-downloaded local file — but only if it's actually on disk. A failed or
+      // partial download leaves a stale DB row whose file is missing; falling through to streaming
+      // then plays the title instead of showing a black screen ("downloaded file won't open").
+      if let file = downloadedFiles?.filter({ $0.metadata.id == playItem.id }).first,
+         FileManager.default.fileExists(atPath: file.localFileURL.path) {
         return file.localFileURL
       }
       let urlString = BestVideoQualityFinder.findBestURL(for: playItem.files)

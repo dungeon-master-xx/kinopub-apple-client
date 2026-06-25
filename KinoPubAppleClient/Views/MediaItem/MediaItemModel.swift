@@ -183,7 +183,8 @@ class MediaItemModel: ObservableObject {
   }
   
   func startDownload(item: DownloadableMediaItem, file: FileInfo) {
-    _ = downloadManager.startDownload(url: URL(string: file.url.http)!, withMetadata: DownloadMeta.make(from: item))
+    guard let url = URL(string: file.url.http) else { return }
+    _ = downloadManager.startDownload(url: url, withMetadata: DownloadMeta.make(from: item, quality: file.quality))
   }
 
   func toggleWatched() {
