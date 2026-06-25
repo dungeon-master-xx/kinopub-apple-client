@@ -31,6 +31,11 @@ struct SearchView: View {
       ScrollView {
         if model.query.trimmingCharacters(in: .whitespaces).isEmpty {
           discoveryContent
+        } else if model.results.isEmpty && !model.searching {
+          EmptyStateView(systemImage: "magnifyingglass",
+                         title: "Nothing found".localized,
+                         message: "Try a different title, actor or director.".localized)
+            .padding(.top, 80)
         } else {
           resultsContent
         }
