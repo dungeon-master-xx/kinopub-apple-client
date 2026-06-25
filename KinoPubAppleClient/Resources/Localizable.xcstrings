@@ -3709,6 +3709,54 @@
           }
         }
       }
+    },
+    "TMDB API key": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDB API key"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключ API TMDB"
+          }
+        }
+      }
+    },
+    "Used to show cast & crew photos. Get a free API key at themoviedb.org.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used to show cast & crew photos. Get a free API key at themoviedb.org."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Используется для показа фото актёров и съёмочной группы. Бесплатный ключ можно получить на themoviedb.org."
+          }
+        }
+      }
+    },
+    "Clear key": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear key"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить ключ"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

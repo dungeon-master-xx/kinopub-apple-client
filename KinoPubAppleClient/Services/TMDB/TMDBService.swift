@@ -48,22 +48,38 @@ protocol TMDBServiceProvider {
 
 final class TMDBServiceImpl: TMDBService {
 
-  private let apiKey: String
+  /// UserDefaults key for the user-supplied TMDB API key (set in app settings). When present it
+  /// overrides the key bundled in Info.plist.
+  static let userDefaultsKey = "tmdbAPIKey"
+
+  /// Key bundled with the app (Info.plist); used when the user hasn't set their own.
+  private let fallbackAPIKey: String
   private let session: URLSession
   private let cache = NSCache<NSString, NSURL>()
   private var misses = Set<String>()
   private let lock = NSLock()
 
+  /// The effective key: the user's override from settings if set, else the bundled key. Read live so
+  /// changing it in settings takes effect without an app restart.
+  private var apiKey: String {
+    let override = UserDefaults.standard.string(forKey: Self.userDefaultsKey)?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    if let override, !override.isEmpty { return override }
+    return fallbackAPIKey
+  }
+
   init(apiKey: String, session: URLSession = .shared) {
-    self.apiKey = apiKey
+    self.fallbackAPIKey = apiKey
     self.session = session
   }
 
   func personImageURL(for name: String, role: TMDBPersonRole) async -> URL? {
     let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    let apiKey = self.apiKey
     guard !trimmed.isEmpty, !apiKey.isEmpty else { return nil }
-    // Cache per (role, name): the same name can resolve to different people as actor vs director.
-    let key = "\(role.department):\(trimmed)"
+    // Cache per (key, role, name): namespacing by key means changing the API key invalidates stale
+    // misses; the role matters because a name can resolve to different people as actor vs director.
+    let key = "\(apiKey)|\(role.department):\(trimmed)"
 
     lock.lock()
     if let cached = cache.object(forKey: key as NSString) {
@@ -110,6 +126,7 @@ final class TMDBServiceImpl: TMDBService {
 
   func people(matching query: String, role: TMDBPersonRole) async -> [TMDBPerson] {
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    let apiKey = self.apiKey
     guard !trimmed.isEmpty, !apiKey.isEmpty else { return [] }
 
     guard var components = URLComponents(string: "https://api.themoviedb.org/3/search/person") else { return [] }
