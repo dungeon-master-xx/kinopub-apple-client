@@ -30,6 +30,8 @@ struct SidebarNavigationDetail: View {
       sport
     case .collections:
       collections
+    case .newEpisodes:
+      newEpisodes
     case .watching:
       watching
     case .bookmarks:
@@ -81,10 +83,18 @@ struct SidebarNavigationDetail: View {
                                             errorHandler: errorHandler))
   }
 
+  var newEpisodes: some View {
+    WatchingView(model: WatchingModel(itemsService: appContext.contentService,
+                                      authState: authState,
+                                      errorHandler: errorHandler,
+                                      tab: .newEpisodes))
+  }
+
   var watching: some View {
     WatchingView(model: WatchingModel(itemsService: appContext.contentService,
                                       authState: authState,
-                                      errorHandler: errorHandler))
+                                      errorHandler: errorHandler,
+                                      tab: .watchlist))
   }
 
   var bookmarks: some View {

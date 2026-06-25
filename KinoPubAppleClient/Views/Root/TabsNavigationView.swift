@@ -32,6 +32,7 @@ struct TabsNavigationView: View {
       sportTab
       collectionsTab
       bookmarksTab
+      newEpisodesTab
       watchingTab
       historyTab
       downloadsTab
@@ -107,10 +108,23 @@ struct TabsNavigationView: View {
     .toolbarBackground(Color.KinoPub.background, for: placement)
   }
   
+  var newEpisodesTab: some View {
+    WatchingView(model: WatchingModel(itemsService: appContext.contentService,
+                                      authState: authState,
+                                      errorHandler: errorHandler,
+                                      tab: .newEpisodes))
+    .tag(NavigationTabs.newEpisodes)
+    .tabItem {
+      Label("New episodes", systemImage: "sparkles.tv")
+    }
+    .toolbarBackground(Color.KinoPub.background, for: placement)
+  }
+
   var watchingTab: some View {
     WatchingView(model: WatchingModel(itemsService: appContext.contentService,
                                       authState: authState,
-                                      errorHandler: errorHandler))
+                                      errorHandler: errorHandler,
+                                      tab: .watchlist))
     .tag(NavigationTabs.watching)
     .tabItem {
       Label("Watching", systemImage: "play.tv")

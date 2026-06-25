@@ -14,6 +14,7 @@ enum NavigationTabs {
   case sport
   case collections
   case bookmarks
+  case newEpisodes
   case watching
   case history
   case downloads
@@ -28,6 +29,7 @@ enum SidebarItem: Hashable, Identifiable {
   case category(MediaType)
   case sport
   case collections
+  case newEpisodes
   case watching
   case bookmarks
   case history
@@ -41,6 +43,7 @@ enum SidebarItem: Hashable, Identifiable {
     case .category(let type): return "category-\(type.rawValue)"
     case .sport: return "sport"
     case .collections: return "collections"
+    case .newEpisodes: return "new-episodes"
     case .watching: return "watching"
     case .bookmarks: return "bookmarks"
     case .history: return "history"
@@ -61,6 +64,7 @@ enum SidebarItem: Hashable, Identifiable {
     case .category(let type): return type.title
     case .sport: return "Sport"
     case .collections: return "Collections"
+    case .newEpisodes: return "New episodes"
     case .watching: return "Watching"
     case .bookmarks: return "Bookmarks"
     case .history: return "History"
@@ -76,6 +80,7 @@ enum SidebarItem: Hashable, Identifiable {
     case .category(let type): return type.systemImage
     case .sport: return "sportscourt"
     case .collections: return "rectangle.stack"
+    case .newEpisodes: return "sparkles.tv"
     case .watching: return "play.tv"
     case .bookmarks: return "bookmark"
     case .history: return "clock.arrow.circlepath"

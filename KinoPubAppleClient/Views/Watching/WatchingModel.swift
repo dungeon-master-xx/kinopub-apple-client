@@ -60,13 +60,19 @@ class WatchingModel: ObservableObject {
 
   @Published public var serials: [WatchingSerial] = []
   @Published public var isLoading: Bool = true
-  @Published public var tab: WatchingTab = .newEpisodes
+  /// Fixed for the lifetime of the screen — "New episodes" and "Watching" are now two separate
+  /// top-level destinations rather than tabs inside one screen.
+  public let tab: WatchingTab
   @Published public var episodesType: WatchingEpisodesType = .serial
 
-  init(itemsService: VideoContentService, authState: AuthState, errorHandler: ErrorHandler) {
+  init(itemsService: VideoContentService,
+       authState: AuthState,
+       errorHandler: ErrorHandler,
+       tab: WatchingTab = .newEpisodes) {
     self.contentService = itemsService
     self.authState = authState
     self.errorHandler = errorHandler
+    self.tab = tab
     subscribeForReload()
   }
 
@@ -96,11 +102,6 @@ class WatchingModel: ObservableObject {
     }
   }
 
-  func select(tab: WatchingTab) {
-    guard tab != self.tab else { return }
-    self.tab = tab
-  }
-
   func select(episodesType: WatchingEpisodesType) {
     guard episodesType != self.episodesType else { return }
     self.episodesType = episodesType
@@ -113,18 +114,16 @@ class WatchingModel: ObservableObject {
     await fetchItems()
   }
 
-  // Refetch whenever the tab or the new-episodes content-type changes.
+  // Refetch whenever the new-episodes content-type sub-tab changes.
   private func subscribeForReload() {
-    Publishers.Merge(
-      $tab.removeDuplicates().map { _ in () },
-      $episodesType.removeDuplicates().map { _ in () }
-    )
-    .dropFirst()
-    .sink { [weak self] _ in
-      self?.serials = []
-      Task { await self?.fetchItems() }
-    }
-    .store(in: &bag)
+    $episodesType
+      .removeDuplicates()
+      .dropFirst()
+      .sink { [weak self] _ in
+        self?.serials = []
+        Task { await self?.fetchItems() }
+      }
+      .store(in: &bag)
   }
 
   private func subscribeForAuth() {

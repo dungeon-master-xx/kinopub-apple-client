@@ -145,8 +145,10 @@ struct MediaItemView: View {
 
         MetadataRow(items: heroBadges)
 
-        // Reuse the КП / IMDb badges from the tiles in the hero.
-        ContentItemRatingView(imdbScore: mediaItem.imdbRating, kinopoiskScore: mediaItem.kinopoiskRating)
+        // Reuse the КП / IMDb badges from the tiles in the hero (no background pill here).
+        ContentItemRatingView(imdbScore: mediaItem.imdbRating,
+                              kinopoiskScore: mediaItem.kinopoiskRating,
+                              showsBackground: false)
 
         heroActions
           .padding(.top, 6)

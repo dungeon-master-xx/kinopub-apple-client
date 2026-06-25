@@ -37,6 +37,7 @@ struct Sidebar: View {
       }
 
       Section("Other".localized) {
+        row(.newEpisodes)
         row(.watching)
         row(.bookmarks)
         row(.history)

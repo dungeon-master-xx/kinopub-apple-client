@@ -86,9 +86,14 @@ public struct ContentItemRatingView: View {
   var imdbScore: Double?
   var kinopoiskScore: Double?
 
-  public init(imdbScore: Double?, kinopoiskScore: Double?) {
+  /// When false, the rounded background "pill" is dropped (e.g. on the detail hero where the
+  /// badges sit directly on the artwork).
+  var showsBackground: Bool = true
+
+  public init(imdbScore: Double?, kinopoiskScore: Double?, showsBackground: Bool = true) {
     self.imdbScore = imdbScore
     self.kinopoiskScore = kinopoiskScore
+    self.showsBackground = showsBackground
   }
 
   // Brand colours.
@@ -111,10 +116,14 @@ public struct ContentItemRatingView: View {
           score(kinopoiskScore)
         }
       }
-      .padding(.horizontal, 10)
-      .padding(.vertical, 4)
-      .background(Color.KinoPub.selectionBackground)
-      .cornerRadius(8)
+      .padding(.horizontal, showsBackground ? 10 : 0)
+      .padding(.vertical, showsBackground ? 4 : 0)
+      .background {
+        if showsBackground {
+          Color.KinoPub.selectionBackground
+        }
+      }
+      .cornerRadius(showsBackground ? 8 : 0)
     }
   }
 

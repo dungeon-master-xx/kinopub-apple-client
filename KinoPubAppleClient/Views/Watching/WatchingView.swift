@@ -16,21 +16,23 @@ struct WatchingView: View {
   @EnvironmentObject var errorHandler: ErrorHandler
   @Environment(\.appContext) var appContext
   @StateObject private var model: WatchingModel
+  // Local path: "New episodes" and "Watching" are two top-level screens — each owns its own
+  // navigation stack so they never share one path binding (which would crash on switch).
+  @State private var path: [WatchingRoutes] = []
 
   init(model: @autoclosure @escaping () -> WatchingModel) {
     _model = StateObject(wrappedValue: model())
   }
 
   var body: some View {
-    NavigationStack(path: $navigationState.watchingRoutes) {
+    NavigationStack(path: $path) {
       VStack(spacing: 0) {
-        tabPicker
         if model.tab == .newEpisodes {
           episodesTypePicker
         }
         content
       }
-      .navigationTitle("Watching".localized)
+      .navigationTitle((model.tab == .newEpisodes ? "New episodes" : "Watching").localized)
       #if !os(macOS)
       .navigationBarTitleDisplayMode(.large)
       #endif
@@ -64,18 +66,6 @@ struct WatchingView: View {
       }
       .handleError(state: $errorHandler.state)
     }
-  }
-
-  var tabPicker: some View {
-    FilterChipBar(items: WatchingTab.allCases.map {
-                    FilterChipItem(id: $0.rawValue, title: $0.title.localized)
-                  },
-                  selection: Binding(
-                    get: { model.tab.rawValue },
-                    set: { if let tab = WatchingTab(rawValue: $0) {
-                      model.select(tab: tab)
-                    } }
-                  ))
   }
 
   var episodesTypePicker: some View {
