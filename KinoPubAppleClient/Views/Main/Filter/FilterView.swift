@@ -34,7 +34,6 @@ struct FilterView: View {
       Form {
         genreSection
         countrySection
-        subtitlesSortPeriodSection
         yearSection
         kinopoiskRatingSection
         imdbRatingSection
@@ -92,49 +91,6 @@ struct FilterView: View {
         }
         .pickerStyle(.menu)
       }
-    }
-  }
-
-  // MARK: - Subtitles / Sort / Period
-
-  var subtitlesSortPeriodSection: some View {
-    Section {
-      Picker("Subtitles".localized, selection: $model.subtitles) {
-        ForEach(SubtitlesOption.allCases) { option in
-          Text(option.titleKey.localized).tag(option.rawValue)
-        }
-      }
-      .pickerStyle(.menu)
-
-      // Sort lives in the toolbar sort control now (see SortSelectionView), not in the filter.
-
-      Picker("Period".localized, selection: $model.period) {
-        ForEach(PeriodOption.allCases) { option in
-          Text(option.titleKey.localized).tag(option.rawValue)
-        }
-      }
-      .pickerStyle(.menu)
-
-      Picker("Language".localized, selection: $model.language) {
-        ForEach(LanguageOption.allCases) { option in
-          Text(option.titleKey.localized).tag(option.rawValue)
-        }
-      }
-      .pickerStyle(.menu)
-
-      Picker("Translation".localized, selection: $model.translation) {
-        ForEach(TranslationOption.allCases) { option in
-          Text(option.titleKey.localized).tag(option.rawValue)
-        }
-      }
-      .pickerStyle(.menu)
-
-      Picker("Age".localized, selection: $model.age) {
-        ForEach(AgeOption.allCases) { option in
-          Text(option.titleKey.localized).tag(option.rawValue)
-        }
-      }
-      .pickerStyle(.menu)
     }
   }
 
