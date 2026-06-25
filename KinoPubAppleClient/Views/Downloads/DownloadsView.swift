@@ -43,11 +43,33 @@ struct DownloadsView: View {
   var downloadsList: some View {
     List {
       activeDownloadsList
+      hlsActiveList
       downloadedFilesList
+      hlsCompletedList
     }
     .listStyle(.inset)
     .scrollContentBackground(.hidden)
     .background(Color.KinoPub.background)
+  }
+
+  /// In-progress HLS downloads (offline, with all tracks/subs). Not navigable until finished.
+  var hlsActiveList: some View {
+    ForEach(catalog.hlsActive) { download in
+      DownloadedItemView(mediaItem: download.meta, progress: download.progress) { _ in }
+    }
+    .onDelete(perform: { catalog.cancelHLSDownload(at: $0) })
+    .listRowBackground(Color.KinoPub.background)
+  }
+
+  /// Completed HLS downloads (.movpkg). Tapping opens the player; swipe deletes the bundle.
+  var hlsCompletedList: some View {
+    ForEach(catalog.hlsCompleted, id: \.relativePath) { asset in
+      NavigationLink(value: Route.player(asset.meta)) {
+        DownloadedItemView(mediaItem: asset.meta, progress: nil, fileURL: asset.localFileURL) { _ in }
+      }
+    }
+    .onDelete(perform: { catalog.deleteHLSCompleted(at: $0) })
+    .listRowBackground(Color.KinoPub.background)
   }
   
   var activeDownloadsList: some View {

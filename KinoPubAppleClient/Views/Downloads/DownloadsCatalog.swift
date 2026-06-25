@@ -20,11 +20,17 @@ class DownloadsCatalog: ObservableObject {
   
   @Published public var downloadedItems: [DownloadedFileInfo<DownloadMeta>] = []
   @Published public var activeDownloads: [Download<DownloadMeta>] = []
-  
+  /// Offline HLS downloads (in-progress + completed), accessed via AppContext.shared.
+  @Published public var hlsActive: [HLSActiveDownload] = []
+  @Published public var hlsCompleted: [HLSDownloadedAsset] = []
+
+  private var hlsManager: HLSAssetDownloadManager { AppContext.shared.hlsDownloadManager }
+  private var hlsStore: HLSDownloadsStore { AppContext.shared.hlsDownloadsStore }
+
   var cancellables = [AnyCancellable]()
-  
+
   var isEmpty: Bool {
-    downloadedItems.isEmpty && activeDownloads.isEmpty
+    downloadedItems.isEmpty && activeDownloads.isEmpty && hlsActive.isEmpty && hlsCompleted.isEmpty
   }
   
   init(downloadsDatabase: DownloadedFilesDatabase<DownloadMeta>, downloadManager: DownloadManager<DownloadMeta>) {
@@ -46,7 +52,20 @@ class DownloadsCatalog: ObservableObject {
     }
     self.downloadedItems = present
     self.activeDownloads = downloadManager.activeDownloads.map({ $0.value })
+    // HLS: completed assets (reconciled against disk) + in-flight downloads.
+    self.hlsCompleted = hlsStore.reconcile()
+    self.hlsActive = hlsManager.activeDownloads
     cancellables.removeAll()
+    // Republish when the HLS manager's downloads change (progress / completion). objectWillChange
+    // fires before the change, so read on the next main-queue tick to pick up new values.
+    hlsManager.objectWillChange
+      .receive(on: DispatchQueue.main)
+      .sink(receiveValue: { [weak self] in
+        guard let self else { return }
+        self.hlsActive = self.hlsManager.activeDownloads
+        self.hlsCompleted = self.hlsStore.readData()
+      })
+      .store(in: &cancellables)
     self.activeDownloads.forEach({
       // Re-deliver on the main queue asynchronously: a progress tick must not republish *during*
       // a SwiftUI view update (that traps with "Publishing changes from within view updates").
@@ -71,6 +90,20 @@ class DownloadsCatalog: ObservableObject {
       downloadManager.removeDownload(for: activeDownloads[index].url)
     }
     activeDownloads.remove(atOffsets: indexSet)
+  }
+
+  func cancelHLSDownload(at indexSet: IndexSet) {
+    for index in indexSet {
+      hlsManager.cancelDownload(key: hlsActive[index].id)
+    }
+    hlsActive.remove(atOffsets: indexSet)
+  }
+
+  func deleteHLSCompleted(at indexSet: IndexSet) {
+    for index in indexSet {
+      hlsStore.remove(hlsCompleted[index])
+    }
+    hlsCompleted.remove(atOffsets: indexSet)
   }
   
   func toggle(download: Download<DownloadMeta>) {

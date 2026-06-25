@@ -77,6 +77,12 @@ class PlayerManager: ObservableObject {
   private var fileURL: URL? {
     switch watchMode {
     case .media:
+      // Prefer a downloaded offline HLS asset (.movpkg) — full quality + all audio tracks + subtitles.
+      if let hls = AppContext.shared.hlsDownloadsStore.asset(forId: playItem.id,
+                                                             video: playItem.metadata.video,
+                                                             season: playItem.metadata.season) {
+        return hls.localFileURL
+      }
       let downloadedFiles = downloadedFilesDatabase.readData() ?? []
       let sameItem = downloadedFiles.filter { $0.metadata.id == playItem.id }
       // For a series there can be several downloads under the same (series) id, plus stale rows whose

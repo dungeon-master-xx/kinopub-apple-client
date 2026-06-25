@@ -100,6 +100,8 @@
 		CCFBE1582A86BD91001CBEC1 /* Sidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCFBE1572A86BD91001CBEC1 /* Sidebar.swift */; };
 		CCFDF43E2A828B6B0035D8E0 /* Providers.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCFDF43D2A828B6B0035D8E0 /* Providers.swift */; };
 		AAAAAAAA0000000000000013 /* SeasonDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAAAAAA0000000000000012 /* SeasonDownloadManager.swift */; };
+		AA01000A2C0000010000AAAA /* HLSAssetDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01000B2C0000010000BBBB /* HLSAssetDownloadManager.swift */; };
+		AA01000C2C0000010000CCCC /* HLSDownloadsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01000D2C0000010000DDDD /* HLSDownloadsStore.swift */; };
 		E9B23707EB014F078A5F0143 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3A0D46F9D2449768FBBC265 /* HistoryView.swift */; };
 		7AEC655FD7434C10B7B0E39C /* SportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F03D8CE7F3C4AA4AB0C8BEA /* SportView.swift */; };
 		67215A5C94224236B5D0982E /* DeviceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC65212CCA1B41A1AF3FD6E4 /* DeviceService.swift */; };
@@ -225,6 +227,8 @@
 		CCFBE1572A86BD91001CBEC1 /* Sidebar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Sidebar.swift; sourceTree = "<group>"; };
 		CCFDF43D2A828B6B0035D8E0 /* Providers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Providers.swift; sourceTree = "<group>"; };
 		AAAAAAAA0000000000000012 /* SeasonDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonDownloadManager.swift; sourceTree = "<group>"; };
+		AA01000B2C0000010000BBBB /* HLSAssetDownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSAssetDownloadManager.swift; sourceTree = "<group>"; };
+		AA01000D2C0000010000DDDD /* HLSDownloadsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSDownloadsStore.swift; sourceTree = "<group>"; };
 		CD13911584DC413B9B356179 /* HistoryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryModel.swift; sourceTree = "<group>"; };
 		FABD71B3BB5D41E0B69E6F76 /* HomeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -340,6 +344,8 @@
 			children = (
 				CCFDF43D2A828B6B0035D8E0 /* Providers.swift */,
 				AAAAAAAA0000000000000012 /* SeasonDownloadManager.swift */,
+				AA01000B2C0000010000BBBB /* HLSAssetDownloadManager.swift */,
+				AA01000D2C0000010000DDDD /* HLSDownloadsStore.swift */,
 			);
 			path = Download;
 			sourceTree = "<group>";
@@ -847,6 +853,8 @@
 				CC0146352A78439600F858AF /* NavigationLinkProvider.swift in Sources */,
 				CCFDF43E2A828B6B0035D8E0 /* Providers.swift in Sources */,
 				AAAAAAAA0000000000000013 /* SeasonDownloadManager.swift in Sources */,
+				AA01000A2C0000010000AAAA /* HLSAssetDownloadManager.swift in Sources */,
+				AA01000C2C0000010000CCCC /* HLSDownloadsStore.swift in Sources */,
 				CCF388412A71C9CF00242581 /* AccessTokenServiceImpl.swift in Sources */,
 				CC71E7262A6DD643004AFB3F /* AppDelegate.swift in Sources */,
 				CC71E7012A6DD043004AFB3F /* AuthView.swift in Sources */,

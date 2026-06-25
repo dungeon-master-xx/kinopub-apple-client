@@ -3997,7 +3997,23 @@
     },
     "ЕЩЕ": {},
     "Свернуть": {},
-    "•": {}
+    "•": {},
+    "Download started": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download started"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загрузка началась"
+          }
+        }
+      }
+    }
   },
   "version": "1.0"
 }
