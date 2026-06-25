@@ -463,7 +463,16 @@ struct MediaItemView: View {
         }
       }
     } else {
-      qualityButtons(for: movieDownloadable)
+      switch libraryState.downloadStatus(itemId: mediaItem.id, video: nil, season: nil) {
+      case .downloaded:
+        Button { } label: { Label("Downloaded".localized, systemImage: "checkmark.circle.fill") }
+          .disabled(true)
+      case .downloading:
+        Button { } label: { Label("Downloading…".localized, systemImage: "arrow.down.circle") }
+          .disabled(true)
+      case .none:
+        qualityButtons(for: movieDownloadable)
+      }
     }
   }
 
@@ -509,6 +518,26 @@ struct MediaItemView: View {
     }
   }
 
+  /// Download entry in an episode's context menu. Once an episode is downloaded (or downloading) we
+  /// show a disabled status row instead of the quality picker, so it can't be queued twice.
+  @ViewBuilder
+  private func episodeDownloadMenu(_ episode: Episode, in season: Season) -> some View {
+    switch libraryState.downloadStatus(itemId: mediaItem.id, video: episode.number, season: season.number) {
+    case .downloaded:
+      Button { } label: { Label("Downloaded".localized, systemImage: "checkmark.circle.fill") }
+        .disabled(true)
+    case .downloading:
+      Button { } label: { Label("Downloading…".localized, systemImage: "arrow.down.circle") }
+        .disabled(true)
+    case .none:
+      Menu {
+        qualityButtons(for: episodeDownloadable(episode, in: season))
+      } label: {
+        Label("Download".localized, systemImage: "arrow.down.circle")
+      }
+    }
+  }
+
   private var firstPlayableEpisode: Episode? {
     guard let season = mediaItem.seasons?.first,
           let episode = season.episodes.first else { return nil }
@@ -545,7 +574,9 @@ struct MediaItemView: View {
                     }
                   }
                   .overlay(alignment: .bottomTrailing) {
-                    downloadBadge(itemId: episode.id, video: episode.number, season: season.number)
+                    // Downloads are keyed on the series id (DownloadMeta.id == mediaItem.id), not the
+                    // episode id — so the badge must query the series id to actually match.
+                    downloadBadge(itemId: mediaItem.id, video: episode.number, season: season.number)
                   }
                 }
                 #if os(macOS)
@@ -560,11 +591,7 @@ struct MediaItemView: View {
                     Label(watched ? "Mark as Unwatched".localized : "Mark as Watched".localized,
                           systemImage: watched ? "checkmark.circle" : "circle")
                   }
-                  Menu {
-                    qualityButtons(for: episodeDownloadable(episode, in: season))
-                  } label: {
-                    Label("Download".localized, systemImage: "arrow.down.circle")
-                  }
+                  episodeDownloadMenu(episode, in: season)
                 }
               }
             }
@@ -735,7 +762,7 @@ struct MediaItemView: View {
 
   @ViewBuilder
   private var commentsSection: some View {
-    if !isSkeleton {
+    if FeatureFlags.comments, !isSkeleton {
       Button {
         showComments = true
       } label: {

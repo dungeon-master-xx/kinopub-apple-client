@@ -65,6 +65,7 @@ struct DownloadsView: View {
                          progress: download.progress,
                          speed: download.speed,
                          remaining: download.remaining) { _ in }
+        .contextMenu { detailLink(for: download.meta) }
     }
     .onDelete(perform: { catalog.cancelHLSDownload(at: $0) })
     .listRowBackground(Color.KinoPub.background)
@@ -76,11 +77,12 @@ struct DownloadsView: View {
       NavigationLink(value: Route.player(asset.meta)) {
         DownloadedItemView(mediaItem: asset.meta, progress: nil, fileURL: asset.localFileURL) { _ in }
       }
+      .contextMenu { detailLink(for: asset.meta) }
     }
     .onDelete(perform: { catalog.deleteHLSCompleted(at: $0) })
     .listRowBackground(Color.KinoPub.background)
   }
-  
+
   var activeDownloadsList: some View {
     // In-progress downloads are NOT navigable (file isn't ready) — so the pause/resume button
     // is tappable instead of the whole row opening the player.
@@ -91,23 +93,35 @@ struct DownloadsView: View {
                          remaining: download.remainingTime) { _ in
         catalog.toggle(download: download)
       }
+      .contextMenu { detailLink(for: download.metadata) }
     }
     .onDelete(perform: { indexSet in
       catalog.deleteActiveDownload(at: indexSet)
     })
     .listRowBackground(Color.KinoPub.background)
   }
-  
+
   var downloadedFilesList: some View {
     ForEach(catalog.downloadedItems, id: \.originalURL) { fileInfo in
       NavigationLink(value: Route.player(fileInfo.metadata)) {
         DownloadedItemView(mediaItem: fileInfo.metadata, progress: nil, fileURL: fileInfo.localFileURL) { _ in }
       }
+      .contextMenu { detailLink(for: fileInfo.metadata) }
     }
     .onDelete(perform: { indexSet in
       catalog.deleteDownloadedItem(at: indexSet)
     })
     .listRowBackground(Color.KinoPub.background)
+  }
+
+  /// Long-press menu entry to jump from a download to its movie/series detail page.
+  /// `DownloadMeta.id` is the series/movie content id, so detailsByID opens the right title.
+  @ViewBuilder
+  private func detailLink(for meta: DownloadMeta) -> some View {
+    NavigationLink(value: Route.detailsByID(meta.id)) {
+      Label(meta.episode != nil ? "Go to Series".localized : "Go to Movie".localized,
+            systemImage: "info.circle")
+    }
   }
   
   var emptyView: some View {
