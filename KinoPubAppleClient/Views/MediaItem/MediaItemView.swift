@@ -229,7 +229,7 @@ struct MediaItemView: View {
   }
 
   private var watchedButton: some View {
-    let watched = (mediaItem.videos?.first?.watched ?? 0) > 0
+    let watched = itemModel.isMovieWatched
     return circleIconButton(watched ? "eye.fill" : "eye",
                             accessibility: watched ? "Mark as Unwatched" : "Mark as Watched") {
       itemModel.toggleWatched()
@@ -467,6 +467,14 @@ struct MediaItemView: View {
                               title: episode.fixedTitle,
                               footnote: "\(max(episode.duration / 60, 1)) мин",
                               progress: episodeProgress(episode))
+                  .overlay(alignment: .topTrailing) {
+                    if itemModel.isEpisodeWatched(episode) {
+                      Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.white, Color.KinoPub.accent)
+                        .padding(8)
+                    }
+                  }
                 }
                 #if os(macOS)
                 .buttonStyle(.plain)
@@ -474,10 +482,11 @@ struct MediaItemView: View {
                 .id(episode.id)
                 .contextMenu {
                   Button {
-                    itemModel.toggleEpisodeWatched(episodeNumber: episode.number, season: season.number)
+                    itemModel.toggleEpisodeWatched(episode: episode, season: season.number)
                   } label: {
-                    Label(episode.watched > 0 ? "Mark as Unwatched".localized : "Mark as Watched".localized,
-                          systemImage: episode.watched > 0 ? "checkmark.circle" : "circle")
+                    let watched = itemModel.isEpisodeWatched(episode)
+                    Label(watched ? "Mark as Unwatched".localized : "Mark as Watched".localized,
+                          systemImage: watched ? "checkmark.circle" : "circle")
                   }
                   Menu {
                     qualityButtons(for: episodeDownloadable(episode, in: season))
@@ -578,7 +587,7 @@ struct MediaItemView: View {
   }
 
   private func episodeProgress(_ episode: Episode) -> Double? {
-    if episode.watched > 0 { return 1.0 }
+    if itemModel.isEpisodeWatched(episode) { return 1.0 }
     if episode.duration > 0, episode.watching.time > 0 {
       return min(max(Double(episode.watching.time) / Double(episode.duration), 0.02), 1.0)
     }
