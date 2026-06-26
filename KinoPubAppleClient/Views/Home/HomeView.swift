@@ -113,7 +113,9 @@ struct HomeView: View {
             .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.bottom, 20)
+        // Extra bottom inset lifts the hero text/button off the page-indicator dots so there's
+        // clear breathing room above the dots (they sit at the very bottom of the TabView).
+        .padding(.bottom, 44)
       }
     }
     .buttonStyle(PlainButtonStyle())

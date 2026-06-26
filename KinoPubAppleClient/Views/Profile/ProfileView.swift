@@ -17,13 +17,11 @@ struct ProfileView: View {
   @Environment(\.appContext) var appContext
   @StateObject private var model: ProfileModel
   @AppStorage("selectedLanguage") private var selectedLanguage: String = (Locale.current.language.languageCode?.identifier ?? "en")
-  /// User-supplied TMDB API key (overrides the bundled one); read live by TMDBServiceImpl.
-  @AppStorage(TMDBServiceImpl.userDefaultsKey) private var tmdbAPIKey: String = ""
   /// Caps streaming quality; read by PlayerManager when building the AVPlayerItem.
   @AppStorage(StreamQuality.userDefaultsKey) private var streamQuality: StreamQuality = .auto
 
   @State private var showLogoutAlert: Bool = false
-  @State private var cacheSize: String = ImageCache.shared.formattedDiskUsage()
+  @State private var showStorage: Bool = false
   @Environment(\.sectionEmbedded) private var sectionEmbedded
 
   init(model: @autoclosure @escaping () -> ProfileModel) {
@@ -58,13 +56,13 @@ struct ProfileView: View {
 
             videoQualitySection
 
-            Section(header: Text("Storage")) {
-              LabeledContent("Image Cache", value: cacheSize)
-              Button(role: .destructive) {
-                ImageCache.shared.clear()
-                cacheSize = ImageCache.shared.formattedDiskUsage()
+            Section {
+              Button {
+                showStorage = true
               } label: {
-                Text("Clear Image Cache")
+                LabeledContent("Storage".localized) {
+                  Image(systemName: "chevron.right").font(.caption).foregroundStyle(Color.KinoPub.subtitle)
+                }
               }
 #if os(macOS)
               .buttonStyle(PlainButtonStyle())
@@ -76,9 +74,11 @@ struct ProfileView: View {
                 DeviceSettingsView(model: DeviceSettingsModel(deviceService: appContext.deviceService,
                                                               errorHandler: errorHandler))
               }
+              NavigationLink("Devices".localized) {
+                DevicesView(model: DevicesListModel(deviceService: appContext.deviceService,
+                                                    errorHandler: errorHandler))
+              }
             }
-
-            tmdbSection
 
             Section {
               Button(action: {
@@ -100,6 +100,9 @@ struct ProfileView: View {
       .onAppear(perform: {
         model.fetch()
       })
+      .sheet(isPresented: $showStorage) {
+        StorageBreakdownView()
+      }
       .alert("Are you sure?", isPresented: $showLogoutAlert) {
         Button("Logout", role: .destructive) { model.logout() }
         Button("Cancel", role: .cancel) { }
@@ -115,27 +118,6 @@ struct ProfileView: View {
         )
       }
   }
-  private var tmdbSection: some View {
-    Section(header: Text("TMDB"),
-            footer: Text("Used to show cast & crew photos. Get a free API key at themoviedb.org.".localized)) {
-      SecureField("TMDB API key".localized, text: $tmdbAPIKey)
-        .autocorrectionDisabled()
-#if os(iOS)
-        .textInputAutocapitalization(.never)
-#endif
-      if !tmdbAPIKey.isEmpty {
-        Button(role: .destructive) {
-          tmdbAPIKey = ""
-        } label: {
-          Text("Clear key".localized)
-        }
-#if os(macOS)
-        .buttonStyle(PlainButtonStyle())
-#endif
-      }
-    }
-  }
-
   private var videoQualitySection: some View {
     Section(header: Text("Video Quality"),
             footer: Text("Caps streaming quality. Auto lets the player adapt to your connection.".localized)) {

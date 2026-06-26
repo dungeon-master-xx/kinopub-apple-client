@@ -32,8 +32,11 @@ struct PlatformInlinePlayer: UIViewControllerRepresentable {
     let controller = AVPlayerViewController()
     controller.player = AVPlayer(url: url)
     controller.videoGravity = .resizeAspect
-    controller.allowsPictureInPicturePlayback = true
-    controller.canStartPictureInPictureAutomaticallyFromInline = true
+    // PiP disabled for the inline Sport player: this representable nils its player on dismantle
+    // (channel switch / scroll / navigating away), which black-screens an active PiP window. Proper
+    // PiP here needs lifecycle handling via AVPlayerViewControllerDelegate + on-device testing.
+    controller.allowsPictureInPicturePlayback = false
+    controller.canStartPictureInPictureAutomaticallyFromInline = false
     controller.player?.play()
     return controller
   }

@@ -39,7 +39,7 @@ typealias AppContextProtocol = AuthorizationServiceProvider
 & UserActionsServiceProvider
 & LocalWatchProgressProvider
 & MediaLibraryProvider
-& TMDBServiceProvider
+& EPGServiceProvider
 
 // MARK: - AppContext
 
@@ -48,6 +48,7 @@ struct AppContext: AppContextProtocol {
   var configuration: Configuration
   var authService: AuthorizationService
   var contentService: VideoContentService
+  var epgService: EPGService
   var collectionsService: CollectionsService
   var deviceService: DeviceService
   var accessTokenService: AccessTokenService
@@ -61,7 +62,6 @@ struct AppContext: AppContextProtocol {
   var actionsService: UserActionsService
   var localProgressStore: LocalWatchProgressStore
   var libraryState: MediaLibraryStore
-  var tmdbService: TMDBService
   /// Offline HLS downloads (iOS). Accessed directly via `AppContext.shared` (not in the protocol).
   var hlsDownloadsStore: HLSDownloadsStore
   var hlsDownloadManager: HLSAssetDownloadManager
@@ -124,6 +124,7 @@ struct AppContext: AppContextProtocol {
     return AppContext(configuration: configuration,
                       authService: authService,
                       contentService: VideoContentServiceImpl(apiClient: apiClient),
+                      epgService: EPGServiceImpl(),
                       collectionsService: CollectionsServiceImpl(apiClient: apiClient),
                       deviceService: DeviceServiceImpl(apiClient: apiClient),
                       accessTokenService: accessTokenService,
@@ -137,7 +138,6 @@ struct AppContext: AppContextProtocol {
                       actionsService: actionsService,
                       localProgressStore: localProgressStore,
                       libraryState: libraryState,
-                      tmdbService: TMDBServiceImpl(apiKey: configuration.tmdbAPIKey),
                       hlsDownloadsStore: hlsDownloadsStore,
                       hlsDownloadManager: hlsDownloadManager)
   }()

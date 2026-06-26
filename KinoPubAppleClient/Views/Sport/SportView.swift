@@ -14,30 +14,23 @@ struct SportView: View {
   @EnvironmentObject var authState: AuthState
   @EnvironmentObject var errorHandler: ErrorHandler
   @Environment(\.appContext) var appContext
-#if os(iOS)
-  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-#endif
   @StateObject private var model: SportModel
-  @State private var selectedChannel: TVChannel?
   // Shares the app-wide Route type so the detail column never mismatches path types on switch.
   @State private var path: [Route] = []
   /// When pushed inside the custom "Ещё" stack, render bare (the More tab provides the stack).
   @Environment(\.sectionEmbedded) private var sectionEmbedded
 
-  // Compact (iPhone) grid — small tiles, ~2× more per row than the old layout.
-  private let gridColumns = [GridItem(.adaptive(minimum: 140), spacing: 14, alignment: .top)]
+  /// Ticking clock: the on-air programme and progress bars refresh against this (~every 30s).
+  @State private var now = Date()
+  private let ticker = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
+
+  /// Caps the top player on wide screens so it never stretches full-width ugly.
+  private let playerMaxWidth: CGFloat = 900
+  /// Comfortable reading width for the channel list on very wide screens.
+  private let listMaxWidth: CGFloat = 900
 
   init(model: @autoclosure @escaping () -> SportModel) {
     _model = StateObject(wrappedValue: model())
-  }
-
-  /// Wide screens (iPad / macOS) get a master list + inline player; iPhone gets a grid.
-  private var isWide: Bool {
-#if os(macOS)
-    return true
-#else
-    return horizontalSizeClass == .regular
-#endif
   }
 
   var body: some View {
@@ -55,6 +48,7 @@ struct SportView: View {
       .kinoScreen("Sport".localized)
       .task { await model.fetchChannels() }
       .refreshable { await model.refresh() }
+      .onReceive(ticker) { now = $0 }
       .handleError(state: $errorHandler.state)
   }
 
@@ -64,227 +58,164 @@ struct SportView: View {
       loadingPlaceholder
     } else if model.channels.isEmpty {
       emptyState
-    } else if isWide {
-      wideLayout
     } else {
-      compactGrid
+      guideLayout
     }
+  }
+
+  // MARK: - Unified layout: player pinned on top, channel + programme list below
+
+  /// One arrangement everywhere: the 16:9 player stays pinned at the top (outside the scroll),
+  /// and the channels scroll underneath. Tapping a row switches the top player.
+  private var guideLayout: some View {
+    VStack(spacing: 0) {
+      playerHeader
+      Divider()
+      guideStatusBar
+      channelList
+    }
+  }
+
+  /// Thin status strip under the player: a spinner + "loading guide" while the EPG downloads,
+  /// then a "guide updated at HH:mm" confirmation (also reassures after pull-to-refresh).
+  @ViewBuilder
+  private var guideStatusBar: some View {
+    Group {
+      if model.isLoadingGuide {
+        HStack(spacing: 8) {
+          ProgressView().controlSize(.small)
+          Text("Loading guide".localized)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(Color.KinoPub.subtitle)
+          Spacer(minLength: 0)
+        }
+      } else if let updated = model.guideUpdatedAt {
+        HStack(spacing: 6) {
+          Image(systemName: "checkmark.circle.fill")
+            .font(.system(size: 11))
+            .foregroundStyle(Color.KinoPub.accent)
+          Text("\("Guide updated".localized) \(EPGTimeFormat.time.string(from: updated))")
+            .font(.system(size: 12))
+            .foregroundStyle(Color.KinoPub.subtitle)
+          Spacer(minLength: 0)
+        }
+      }
+    }
+    .frame(maxWidth: listMaxWidth)
+    .frame(maxWidth: .infinity)
+    .padding(.horizontal, 16)
+    .padding(.vertical, model.isLoadingGuide || model.guideUpdatedAt != nil ? 8 : 0)
+  }
+
+  /// Always-on-top player. Centered and width-capped on wide screens; black 16:9 always.
+  @ViewBuilder
+  private var playerHeader: some View {
+    Group {
+      if let channel = model.selectedChannel, let url = URL(string: channel.stream) {
+        // InlinePlayerView already applies its own black 16:9 frame and rounded clip.
+        InlinePlayerView(url: url)
+          .id(channel.id) // recreate the AVPlayer when the channel changes
+      } else {
+        // No selection yet (or an empty stream): a quiet placeholder in the player area.
+        ZStack {
+          Color.black
+          Image(systemName: "play.tv")
+            .font(.system(size: 44))
+            .foregroundStyle(Color.KinoPub.subtitle)
+        }
+        .aspectRatio(16.0 / 9.0, contentMode: .fit)
+      }
+    }
+    .frame(maxWidth: playerMaxWidth)
+    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .frame(maxWidth: .infinity) // center the capped player on wide screens
+    .padding(16)
+    .background(Color.KinoPub.background)
+  }
+
+  /// The scrolling channel list. Each row merges the channel with its now/next programme info.
+  private var channelList: some View {
+    ScrollView {
+      LazyVStack(spacing: 6) {
+        ForEach(model.channels) { channel in
+          ChannelEPGRow(channel: channel,
+                        current: model.currentProgram(for: channel, at: now),
+                        next: model.nextProgram(for: channel, at: now),
+                        now: now,
+                        isSelected: channel.id == model.selectedChannel?.id,
+                        isLoadingGuide: model.isLoadingGuide)
+            .onTapGesture { model.selectedChannel = channel }
+        }
+      }
+      .frame(maxWidth: listMaxWidth)
+      .frame(maxWidth: .infinity) // center the list on very wide screens
+      .padding(.horizontal, 12)
+      .padding(.vertical, 10)
+    }
+    .background(Color.KinoPub.background)
   }
 
   // MARK: - Loading placeholder (no fullscreen spinner)
 
-  /// While channels load, mirror the real layout with redacted tiles/rows, and keep the player
-  /// area as a locked black 16:9 frame instead of a fullscreen loader.
-  @ViewBuilder
+  /// Mirror the real layout while channels load: a locked black 16:9 player on top and a few
+  /// redacted channel rows below — never a fullscreen loader.
   private var loadingPlaceholder: some View {
-    if isWide {
-      // Mirror wideLayout's own breakpoint so the placeholder matches the real layout at every width
-      // (side-by-side when roomy, player-on-top when narrow — e.g. iPad split view / Slide Over).
-      GeometryReader { geo in
-        if geo.size.width >= 700 {
-          HStack(spacing: 0) {
-            skeletonList
-              .frame(width: 320)
-            Divider()
-            lockedPlayerPlaceholder
-              .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-          }
-        } else {
-          VStack(spacing: 0) {
-            lockedPlayerPlaceholder
-            Divider()
-            skeletonList
-          }
-        }
-      }
-    } else {
+    VStack(spacing: 0) {
+      lockedPlayerPlaceholder
+      Divider()
       ScrollView {
-        LazyVGrid(columns: gridColumns, spacing: 16) {
-          ForEach(0..<12, id: \.self) { _ in skeletonCard }
+        LazyVStack(spacing: 6) {
+          ForEach(0..<10, id: \.self) { _ in skeletonRow }
         }
-        .padding(16)
+        .frame(maxWidth: listMaxWidth)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
       }
+      .background(Color.KinoPub.background)
+      .disabled(true)
     }
   }
 
-  private var skeletonCard: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      RoundedRectangle(cornerRadius: 10, style: .continuous)
+  /// A redacted stand-in for a `ChannelEPGRow` (logo plate + a few text lines + progress bar).
+  private var skeletonRow: some View {
+    HStack(spacing: 12) {
+      RoundedRectangle(cornerRadius: 6, style: .continuous)
         .fill(Color.KinoPub.skeleton)
-        .aspectRatio(16.0 / 9.0, contentMode: .fit)
-      RoundedRectangle(cornerRadius: 4, style: .continuous)
-        .fill(Color.KinoPub.skeleton)
-        .frame(width: 90, height: 12)
+        .frame(width: 76, height: 44)
+      VStack(alignment: .leading, spacing: 6) {
+        RoundedRectangle(cornerRadius: 4, style: .continuous)
+          .fill(Color.KinoPub.skeleton)
+          .frame(width: 120, height: 12)
+        RoundedRectangle(cornerRadius: 4, style: .continuous)
+          .fill(Color.KinoPub.skeleton)
+          .frame(width: 180, height: 10)
+        RoundedRectangle(cornerRadius: 2, style: .continuous)
+          .fill(Color.KinoPub.skeleton)
+          .frame(height: 3)
+      }
+      Spacer(minLength: 0)
     }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 10)
     .redacted(reason: .placeholder)
-  }
-
-  private var skeletonList: some View {
-    ScrollView {
-      VStack(spacing: 10) {
-        ForEach(0..<12, id: \.self) { _ in
-          HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-              .fill(Color.KinoPub.skeleton)
-              .frame(width: 60, height: 40)
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
-              .fill(Color.KinoPub.skeleton)
-              .frame(height: 12)
-            Spacer(minLength: 0)
-          }
-          .padding(.horizontal, 12)
-        }
-      }
-      .padding(.vertical, 10)
-    }
   }
 
   private var lockedPlayerPlaceholder: some View {
     Rectangle()
       .fill(Color.black)
       .aspectRatio(16.0 / 9.0, contentMode: .fit)
-      .frame(maxWidth: 900)
+      .frame(maxWidth: playerMaxWidth)
       .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-      .padding(16)
-  }
-
-  // MARK: - Compact (iPhone): smaller grid, tap opens the modal player
-
-  private var compactGrid: some View {
-    ScrollView {
-      LazyVGrid(columns: gridColumns, spacing: 16) {
-        ForEach(model.channels) { channel in
-          NavigationLink(value: Route.player(channel)) {
-            LiveChannelCard(channel: channel)
-          }
-        }
-      }
-      .padding(16)
-    }
-  }
-
-  // MARK: - Wide (iPad / macOS): channel list + inline 16:9 player
-
-  private var wideLayout: some View {
-    GeometryReader { geo in
-      if geo.size.width >= 700 {
-        // Roomy: list beside the player.
-        HStack(spacing: 0) {
-          channelList
-            .frame(width: 320)
-          Divider()
-          VStack(spacing: 0) {
-            playerHeader
-            Spacer(minLength: 0)
-          }
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-      } else {
-        // Narrow: player on top, list below.
-        VStack(spacing: 0) {
-          playerHeader
-          Divider()
-          channelList
-        }
-      }
-    }
-    .onAppear {
-      if selectedChannel == nil { selectedChannel = model.channels.first }
-    }
-  }
-
-  // Native list: the whole row is selectable (single-selection binding).
-  private var channelList: some View {
-    List(selection: $selectedChannel) {
-      ForEach(model.channels) { channel in
-        ChannelRow(channel: channel, isSelected: channel.id == selectedChannel?.id)
-          .tag(channel)
-          .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
-          .listRowBackground(Color.clear)
-          .listRowSeparator(.hidden)
-      }
-    }
-    .listStyle(.plain)
-    .scrollContentBackground(.hidden)
-    .background(Color.KinoPub.background)
-  }
-
-  @ViewBuilder
-  private var playerHeader: some View {
-    if let channel = selectedChannel, let url = URL(string: channel.stream) {
-      VStack(alignment: .leading, spacing: 12) {
-        InlinePlayerView(url: url)
-          .id(channel.id)
-          .frame(maxWidth: 900)
-        Text(channel.title)
-          .font(.system(size: 20, weight: .bold))
-          .foregroundStyle(Color.KinoPub.text)
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(16)
-    } else {
-      VStack {
-        Spacer()
-        Image(systemName: "play.tv")
-          .font(.system(size: 44))
-          .foregroundStyle(Color.KinoPub.subtitle)
-        Spacer()
-      }
       .frame(maxWidth: .infinity)
-    }
+      .padding(16)
+      .background(Color.KinoPub.background)
   }
 
   // MARK: - States
 
   private var emptyState: some View {
     EmptyStateView(systemImage: "sportscourt", title: "No live broadcasts right now".localized)
-  }
-}
-
-/// Compact tile for the iPhone grid: channel logo + title.
-struct LiveChannelCard: View {
-  let channel: TVChannel
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      ChannelArtwork(logo: channel.logo)
-        .aspectRatio(16.0 / 9.0, contentMode: .fit)
-        .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(
-          RoundedRectangle(cornerRadius: 10, style: .continuous)
-            .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.5)
-        )
-      Text(channel.title)
-        .font(.system(size: 13, weight: .semibold))
-        .foregroundStyle(Color.KinoPub.text)
-        .lineLimit(1)
-    }
-  }
-}
-
-/// A row in the wide-screen channel list.
-struct ChannelRow: View {
-  let channel: TVChannel
-  let isSelected: Bool
-
-  var body: some View {
-    HStack(spacing: 12) {
-      ChannelArtwork(logo: channel.logo)
-        .frame(width: 72, height: 40)
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-      Text(channel.title)
-        .font(.system(size: 15, weight: .medium))
-        .foregroundStyle(Color.KinoPub.text)
-        .lineLimit(2)
-      Spacer(minLength: 0)
-    }
-    .padding(.horizontal, 10)
-    .padding(.vertical, 8)
-    .background(
-      RoundedRectangle(cornerRadius: 8, style: .continuous)
-        .fill(isSelected ? Color.KinoPub.selectionBackground : Color.clear)
-    )
   }
 }
 
@@ -313,6 +244,7 @@ struct ChannelArtwork: View {
 struct SportView_Previews: PreviewProvider {
   static var previews: some View {
     SportView(model: SportModel(itemsService: VideoContentServiceMock(),
+                                epgService: EPGServiceMock(),
                                 authState: AuthState(authService: AuthorizationServiceMock(), accessTokenService: AccessTokenServiceMock()),
                                 errorHandler: ErrorHandler()))
   }

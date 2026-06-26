@@ -12,6 +12,11 @@ import KinoPubLogging
 import KinoPubKit
 import KinoPubUI
 
+/// The current user's like/dislike choice for a title (this session only).
+public enum UserVote: Equatable {
+  case none, up, down
+}
+
 @MainActor
 class MediaItemModel: ObservableObject {
 
@@ -24,11 +29,27 @@ class MediaItemModel: ObservableObject {
 
   @Published public var mediaItem: MediaItem = MediaItem.mock()
   @Published public var itemLoaded: Bool = false
+  /// The user's like/dislike for this title this session. kino.pub voting is ONE-TIME (you can't
+  /// change a cast vote), and there's no API to read a prior vote, so this starts `.none` each session.
+  @Published public var myVote: UserVote = .none
+  /// Like / dislike counts shown next to the ratings — seeded from the item, refreshed after a vote.
+  @Published public var likeCount: Int = 0
+  @Published public var dislikeCount: Int = 0
   /// Transient typed message shown as a toast (e.g. after toggling a bookmark).
   @Published public var toastMessage: ToastMessage?
   @Published public var relatedItems: [MediaItem] = []
-  /// Resolved cast/crew portrait URLs (by name) from TMDB.
-  @Published public var personImages: [String: URL] = [:]
+  /// "More from this director" / "More with this actor" shelves (via /v1/items?director=/cast=).
+  @Published public var moreFromDirector: [MediaItem] = []
+  @Published public var moreWithActor: [MediaItem] = []
+  /// Kinopoisk-sourced extras (facts / reviews / full crew / stills) via the kpapp.link kpapi proxy.
+  /// Best-effort: empty when the title has no Kinopoisk id or a request fails.
+  @Published public var facts: [KpFact] = []
+  @Published public var reviews: KpReviewsPage = .empty
+  @Published public var staff: [KpStaffMember] = []
+  @Published public var images: [KpImage] = []
+  private let extrasService = KinopoiskExtrasService()
+  public var primaryDirector: String? { directorNames.first }
+  public var primaryActor: String? { castNames.first }
   /// Effective watched state for an episode (client optimistic override first, then server data).
   public func isEpisodeWatched(_ episode: Episode) -> Bool {
     AppContext.shared.libraryState.episodeWatched(episodeId: episode.id, serverWatched: episode.watched > 0)
@@ -40,7 +61,6 @@ class MediaItemModel: ObservableObject {
                                                 serverWatched: (mediaItem.videos?.first?.watched ?? 0) > 0)
   }
 
-  private let tmdbService: TMDBService = AppContext.shared.tmdbService
   private let localProgressStore: LocalWatchProgressStore = AppContext.shared.localProgressStore
   /// Bumped when the screen reappears (e.g. back from the player) so the local-progress overlay
   /// re-reads the store immediately, before the authoritative server refetch returns.
@@ -102,26 +122,6 @@ class MediaItemModel: ObservableObject {
       .filter { !$0.isEmpty }
   }
 
-  /// Resolve TMDB portraits for the visible cast & crew (best-effort, cached). Directors are looked
-  /// up with the directing role so a same-named actor isn't picked instead.
-  func loadCastPhotos() async {
-    var requests: [(name: String, role: TMDBPersonRole)] = []
-    var seen = Set<String>()
-    for name in castNames.prefix(12) where seen.insert(name).inserted {
-      requests.append((name, .acting))
-    }
-    for name in directorNames where seen.insert(name).inserted {
-      requests.append((name, .directing))
-    }
-    await withTaskGroup(of: (String, URL?).self) { group in
-      for request in requests where personImages[request.name] == nil {
-        group.addTask { [tmdbService] in (request.name, await tmdbService.personImageURL(for: request.name, role: request.role)) }
-      }
-      for await (name, url) in group {
-        if let url { personImages[name] = url }
-      }
-    }
-  }
 
   /// The content type to use for facet filters opened from this item, so a
   /// serial's genre opens serials and a movie's opens movies.
@@ -192,6 +192,7 @@ class MediaItemModel: ObservableObject {
         let mediaId = mediaItem.id
         mediaItem.seasons = mediaItem.seasons?.map({ $0.mediaId = mediaId; return $0 })
         itemLoaded = true
+        seedVoteCounts()
         // Reconcile optimistic watched overrides against fresh server data: drop the ones the
         // server now confirms (keeps any still-in-flight toggle), so the server can drive again.
         AppContext.shared.libraryState.reconcileWatched(
@@ -204,6 +205,8 @@ class MediaItemModel: ObservableObject {
                                                     folderIds: mediaItem.bookmarks?.map { $0.id } ?? [],
                                                     inWatchlist: mediaItem.inWatchlist == true)
         fetchRelated()
+        fetchPeopleShelves()
+        fetchExtras()
       } catch {
         errorHandler.setError(error)
       }
@@ -236,7 +239,31 @@ class MediaItemModel: ObservableObject {
       }
     }
   }
-  
+
+  /// "More from director" / "More with actor" shelves, mirroring the web detail page. Best-effort:
+  /// a failure just leaves the shelf empty (no error banner).
+  func fetchPeopleShelves() {
+    let contentType = MediaType(rawValue: mediaItem.type) ?? .movie
+    if let director = directorNames.first {
+      Task {
+        let filter = MediaItemsFilter(contentType: contentType, genres: [], countries: [],
+                                      year: nil, age: nil, sort: "rating-", director: director)
+        if let response = try? await itemsService.filter(filter: filter, page: nil) {
+          moreFromDirector = response.items.filter { $0.id != mediaItem.id }.prefix(15).map { $0 }
+        }
+      }
+    }
+    if let actor = castNames.first {
+      Task {
+        let filter = MediaItemsFilter(contentType: contentType, genres: [], countries: [],
+                                      year: nil, age: nil, sort: "rating-", cast: actor)
+        if let response = try? await itemsService.filter(filter: filter, page: nil) {
+          moreWithActor = response.items.filter { $0.id != mediaItem.id }.prefix(15).map { $0 }
+        }
+      }
+    }
+  }
+
   func startDownload(item: DownloadableMediaItem, file: FileInfo) {
     let meta = DownloadMeta.make(from: item, quality: file.quality)
 #if os(iOS)
@@ -282,6 +309,7 @@ class MediaItemModel: ObservableObject {
     Task {
       do {
         try await actionsService.toggleWatching(id: mediaItemId, video: nil, season: nil)
+        toastMessage = newState ? .success("Marked as watched".localized) : .info("Marked as unwatched".localized)
       } catch {
         AppContext.shared.libraryState.setMovieWatched(itemId: mediaItemId, value: !newState)  // revert
         errorHandler.setError(error)
@@ -295,6 +323,7 @@ class MediaItemModel: ObservableObject {
     Task {
       do {
         try await actionsService.toggleWatching(id: mediaItemId, video: episode.number, season: season)
+        toastMessage = newState ? .success("Marked as watched".localized) : .info("Marked as unwatched".localized)
       } catch {
         AppContext.shared.libraryState.setEpisodeWatched(episodeId: episode.id, value: !newState)  // revert
         errorHandler.setError(error)
@@ -309,6 +338,7 @@ class MediaItemModel: ObservableObject {
     Task {
       do {
         try await actionsService.toggleWatchlist(id: mediaItemId)
+        toastMessage = newState ? .success("Added to watchlist".localized) : .info("Removed from watchlist".localized)
       } catch {
         AppContext.shared.libraryState.setWatchlist(itemId: mediaItemId, value: current)  // revert
         errorHandler.setError(error)
@@ -331,6 +361,84 @@ class MediaItemModel: ObservableObject {
           : .info(String(format: "Removed from %@".localized, folderTitle))
       } catch {
         AppContext.shared.libraryState.setBookmark(itemId: mediaItemId, folderId: folderId, isOn: !nowIn)  // revert
+        errorHandler.setError(error)
+      }
+    }
+  }
+
+  /// Cast a like (`up: true` → `like=1`) or dislike (`up: false` → `like=0`). kino.pub votes are
+  /// one-time: the API answers `voted: true` when counted, or `voted: false` when the user already
+  /// voted (it can't be changed). We optimistically highlight + update the count, reverting if the
+  /// server says it didn't count.
+  /// Load Kinopoisk extras (facts / reviews / crew / stills) for this title via the kpapp.link proxy.
+  /// Requires a Kinopoisk id; each request is independent and best-effort (a failure hides its section).
+  func fetchExtras() {
+    guard let filmId = mediaItem.kinopoisk, filmId > 0 else { return }
+    Task { if let r = try? await extrasService.facts(filmId: filmId) { facts = r } }
+    Task { if let r = try? await extrasService.reviews(filmId: filmId) { reviews = r } }
+    Task { if let r = try? await extrasService.staff(filmId: filmId) { staff = r } }
+    Task { if let r = try? await extrasService.images(filmId: filmId) { images = r } }
+  }
+
+  /// kino.pub gives the aggregate as `rating_votes` (total) + `rating_percentage` (% positive), not
+  /// separate like/dislike counts, so derive them for the initial display. A real vote refreshes them.
+  /// Also restores the user's own remembered vote so their like/dislike stays visible on revisits.
+  private func seedVoteCounts() {
+    myVote = AppContext.shared.libraryState.userVote(itemId: mediaItemId).map { $0 ? .up : .down } ?? .none
+    let total = mediaItem.ratingVotes
+    guard total > 0 else { likeCount = 0; dislikeCount = 0; return }
+    let positive = Int((Double(total) * mediaItem.ratingPercentage / 100.0).rounded())
+    likeCount = min(max(positive, 0), total)
+    dislikeCount = total - likeCount
+  }
+
+  func vote(up: Bool) {
+    let target: UserVote = up ? .up : .down
+    // kino.pub votes are permanent: you can't switch a like to a dislike (or re-cast).
+    if myVote == target { return }
+    if myVote != .none {
+      toastMessage = .info("You've already rated this".localized)
+      return
+    }
+    // First vote for this title: optimistic highlight + count bump, remembered locally so it persists.
+    myVote = target
+    AppContext.shared.libraryState.setUserVote(itemId: mediaItemId, up: up)
+    if up { likeCount += 1 } else { dislikeCount += 1 }
+    Task {
+      do {
+        let result = try await actionsService.vote(id: mediaItemId, like: up ? 1 : 0)
+        if result.voted {
+          // Server counted it — trust its fresh totals.
+          if let p = result.positive.flatMap({ Int($0) }) { likeCount = p }
+          if let n = result.negative.flatMap({ Int($0) }) { dislikeCount = n }
+        } else {
+          // The account already voted earlier (e.g. on another device). Keep the user's choice
+          // visible, but undo the optimistic bump since the server didn't count it again.
+          if up { likeCount = max(0, likeCount - 1) } else { dislikeCount = max(0, dislikeCount - 1) }
+        }
+        toastMessage = .success(up ? "Liked".localized : "Disliked".localized)
+      } catch {
+        // Network failure — fully revert (including the remembered vote).
+        myVote = .none
+        AppContext.shared.libraryState.clearUserVote(itemId: mediaItemId)
+        if up { likeCount = max(0, likeCount - 1) } else { dislikeCount = max(0, dislikeCount - 1) }
+        errorHandler.setError(error)
+      }
+    }
+  }
+
+  /// Create a new bookmark folder and put this item in it, then refresh the shared folder list.
+  func createFolderAndAdd(named name: String) {
+    let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !title.isEmpty else { return }
+    Task {
+      do {
+        let folderId = try await actionsService.createBookmarkFolder(title: title)
+        try await actionsService.toggleBookmark(itemId: mediaItemId, folderId: folderId)
+        AppContext.shared.libraryState.setBookmark(itemId: mediaItemId, folderId: folderId, isOn: true)
+        await AppContext.shared.libraryState.reloadBookmarkFolders()
+        toastMessage = .success(String(format: "Saved to %@".localized, title))
+      } catch {
         errorHandler.setError(error)
       }
     }

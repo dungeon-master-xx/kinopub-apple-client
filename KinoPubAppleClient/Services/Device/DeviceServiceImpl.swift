@@ -41,6 +41,16 @@ final class DeviceServiceImpl: DeviceService {
                                            decodingType: EmptyResponseData.self)
   }
 
+  func listDevices() async throws -> [ManagedDevice] {
+    let request = ListDevicesRequest()
+    return try await apiClient.performRequest(with: request, decodingType: DevicesData.self).devices
+  }
+
+  func removeDevice(id: Int) async throws {
+    let request = RemoveDeviceRequest(id: id)
+    _ = try await apiClient.performRequest(with: request, decodingType: EmptyResponseData.self)
+  }
+
   func registerDeviceName() async {
     var title: String
     let hardware: String

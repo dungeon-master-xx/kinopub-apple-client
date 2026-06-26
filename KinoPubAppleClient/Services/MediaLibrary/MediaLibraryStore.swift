@@ -46,6 +46,9 @@ final class MediaLibraryStore: ObservableObject {
   /// Remembered audio track (озвучка) per item/series id. Stores AVFoundation's own identifiers so
   /// re-selection round-trips reliably, independent of kino.pub's audios↔HLS mapping.
   @Published private var audioPreferences: [Int: AudioPreference] = [:]
+  /// The user's like (true) / dislike (false) per item id. kino.pub voting is one-time with no API to
+  /// read a prior vote back, so we remember the user's own choice locally to keep showing it.
+  @Published private var userVotes: [Int: Bool] = [:]
 
   /// Session cache of the user's bookmark folders, so screens don't re-fetch on every appearance.
   @Published private(set) var bookmarkFolders: [Bookmark] = []
@@ -69,6 +72,8 @@ final class MediaLibraryStore: ObservableObject {
     var movieWatched: [Int: Bool] = [:]
     var episodeWatched: [Int: Bool] = [:]
     var audioPreferences: [Int: AudioPreference] = [:]
+    // Optional so older persisted files (without this key) still decode and keep the rest of the state.
+    var userVotes: [Int: Bool]?
   }
 
   // MARK: - Façade dependencies (not owned — queried live)
@@ -286,6 +291,18 @@ final class MediaLibraryStore: ObservableObject {
     await reloadBookmarkFolders()
   }
 
+  /// Drop a folder from the cached list after it's deleted on its detail screen, so the Bookmarks
+  /// list (which observes this) removes it without a full refetch. Also clears item→folder records.
+  @MainActor
+  func removeCachedBookmarkFolder(id: Int) {
+    bookmarkFolders.removeAll { $0.id == id }
+    for (itemId, var record) in records where record.bookmarkFolderIds.contains(id) {
+      record.bookmarkFolderIds.removeAll { $0 == id }
+      records[itemId] = record
+    }
+    persist()
+  }
+
   /// Force a fresh fetch (e.g. pull-to-refresh on the Bookmarks tab, or after creating a folder).
   @MainActor
   func reloadBookmarkFolders() async {
@@ -312,6 +329,25 @@ final class MediaLibraryStore: ObservableObject {
     persist()
   }
 
+  // MARK: - Like / dislike (one-time vote, remembered locally)
+
+  /// The user's remembered vote for an item: `true` = liked, `false` = disliked, nil = not voted.
+  func userVote(itemId: Int) -> Bool? {
+    userVotes[itemId]
+  }
+
+  func setUserVote(itemId: Int, up: Bool) {
+    guard userVotes[itemId] != up else { return }
+    userVotes[itemId] = up
+    persist()
+  }
+
+  func clearUserVote(itemId: Int) {
+    guard userVotes[itemId] != nil else { return }
+    userVotes[itemId] = nil
+    persist()
+  }
+
   // MARK: - Persistence
 
   private func load() {
@@ -321,13 +357,15 @@ final class MediaLibraryStore: ObservableObject {
     movieWatchedOverride = decoded.movieWatched
     episodeWatchedOverride = decoded.episodeWatched
     audioPreferences = decoded.audioPreferences
+    userVotes = decoded.userVotes ?? [:]
   }
 
   private func persist() {
     let snapshot = Persisted(records: records,
                              movieWatched: movieWatchedOverride,
                              episodeWatched: episodeWatchedOverride,
-                             audioPreferences: audioPreferences)
+                             audioPreferences: audioPreferences,
+                             userVotes: userVotes)
     guard let data = try? JSONEncoder().encode(snapshot) else { return }
     try? data.write(to: fileURL, options: .atomic)
   }

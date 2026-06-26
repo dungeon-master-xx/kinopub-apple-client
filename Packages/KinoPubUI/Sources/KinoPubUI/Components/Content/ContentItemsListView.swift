@@ -19,6 +19,9 @@ public struct ContentItemsListView: View {
   /// Optional per-item overlay (e.g. watched/downloaded status badges) injected by the app, since
   /// this component can't reach the app's state. Defaults to nothing.
   public var statusOverlay: (MediaItem) -> AnyView
+  /// Optional per-item long-press / right-click context menu (e.g. "Remove from folder"). When nil,
+  /// no context menu is attached.
+  public var contextMenu: ((MediaItem) -> AnyView)?
 
 #if os(iOS)
   @Environment(\.horizontalSizeClass) private var sizeClass
@@ -61,35 +64,46 @@ public struct ContentItemsListView: View {
               onLoadMoreContent: @escaping (MediaItem) -> Void,
               onRefresh: @escaping @Sendable () async -> Void,
               navigationLinkProvider: @escaping (MediaItem) -> any Hashable,
-              statusOverlay: @escaping (MediaItem) -> AnyView = { _ in AnyView(EmptyView()) }) {
+              statusOverlay: @escaping (MediaItem) -> AnyView = { _ in AnyView(EmptyView()) },
+              contextMenu: ((MediaItem) -> AnyView)? = nil) {
     self._items = items
     self.width = width
     self.onRefresh = onRefresh
     self.onLoadMoreContent = onLoadMoreContent
     self.navigationLinkProvider = navigationLinkProvider
     self.statusOverlay = statusOverlay
+    self.contextMenu = contextMenu
   }
 
   public var body: some View {
     ScrollView {
       LazyVGrid(columns: gridLayout, spacing: 24, content: {
         ForEach(items, id: \.id) { item in
-          NavigationLink(value: navigationLinkProvider(item)) {
-            ContentItemView(mediaItem: item)
-              .overlay(alignment: .topTrailing) { statusOverlay(item) }
-              .onAppear {
-                onLoadMoreContent(item)
-              }
-          }
-          #if os(macOS)
-          .buttonStyle(PlainButtonStyle())
-          #endif
+          itemCell(item)
         }
       })
       .padding(.horizontal, 20)
       .padding(.top, 8)
     }
     .refreshable(action: onRefresh)
+  }
+
+  @ViewBuilder
+  private func itemCell(_ item: MediaItem) -> some View {
+    let cell = NavigationLink(value: navigationLinkProvider(item)) {
+      ContentItemView(mediaItem: item)
+        .overlay(alignment: .topTrailing) { statusOverlay(item) }
+        .onAppear { onLoadMoreContent(item) }
+    }
+#if os(macOS)
+    .buttonStyle(PlainButtonStyle())
+#endif
+
+    if let contextMenu {
+      cell.contextMenu { contextMenu(item) }
+    } else {
+      cell
+    }
   }
 
 }

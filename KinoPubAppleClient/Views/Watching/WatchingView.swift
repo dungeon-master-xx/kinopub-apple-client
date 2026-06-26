@@ -43,6 +43,9 @@ struct WatchingView: View {
         if model.tab == .newEpisodes {
           episodesTypePicker
             .padding(.bottom, 4)
+        } else {
+          watchlistKindPicker
+            .padding(.bottom, 4)
         }
         gridBody(width: width)
       }
@@ -60,7 +63,7 @@ struct WatchingView: View {
     if model.isLoading {
       skeletonGrid(width: width)
     } else if model.serials.isEmpty {
-      EmptyStateView(systemImage: "play.tv", title: "No series here yet".localized)
+      EmptyStateView(systemImage: "play.tv", title: "Nothing here yet".localized)
         .frame(minHeight: 320)
     } else {
       serialsGrid(width: width)
@@ -75,6 +78,19 @@ struct WatchingView: View {
                     get: { model.episodesType.rawValue },
                     set: { if let type = WatchingEpisodesType(rawValue: $0) {
                       model.select(episodesType: type)
+                    } }
+                  ))
+  }
+
+  // Serials vs movies sub-filter for "Я смотрю".
+  var watchlistKindPicker: some View {
+    FilterChipBar(items: WatchlistKind.allCases.map {
+                    FilterChipItem(id: $0.rawValue, title: $0.title.localized)
+                  },
+                  selection: Binding(
+                    get: { model.watchlistKind.rawValue },
+                    set: { if let kind = WatchlistKind(rawValue: $0) {
+                      model.select(watchlistKind: kind)
                     } }
                   ))
   }

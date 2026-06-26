@@ -21,10 +21,6 @@ final class BundleConfiguration: Configuration {
     value(for: "BaseURL")
   }
 
-  var tmdbAPIKey: String {
-    value(for: "TMDBAPIKey")
-  }
-
   private func value(for key: String) -> String {
     Bundle.main.object(forInfoDictionaryKey: key) as! String
   }

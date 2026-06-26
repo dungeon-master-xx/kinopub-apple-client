@@ -18,9 +18,7 @@ struct BookmarkView: View {
   @Environment(\.appContext) var appContext
   @Environment(\.dismiss) private var dismiss
 
-  @State private var showRenameAlert = false
   @State private var showDeleteConfirm = false
-  @State private var renameText = ""
 
   init(model: @autoclosure @escaping () -> BookmarkModel) {
     _model = StateObject(wrappedValue: model())
@@ -43,23 +41,16 @@ struct BookmarkView: View {
         sortMenu
       }
       ToolbarItem(placement: .topBarTrailing) {
-        actionsMenu
+        deleteButton
       }
 #else
       ToolbarItem(placement: .primaryAction) {
         sortMenu
       }
       ToolbarItem(placement: .primaryAction) {
-        actionsMenu
+        deleteButton
       }
 #endif
-    }
-    .alert("Rename folder".localized, isPresented: $showRenameAlert) {
-      TextField("Folder name".localized, text: $renameText)
-      Button("Cancel".localized, role: .cancel) {}
-      Button("Save".localized) {
-        Task { await model.rename(to: renameText) }
-      }
     }
     .alert("Delete folder".localized, isPresented: $showDeleteConfirm) {
       Button("Cancel".localized, role: .cancel) {}
@@ -77,6 +68,7 @@ struct BookmarkView: View {
       await model.fetchItems()
     }
     .handleError(state: $errorHandler.state)
+    .toast(message: $model.toastMessage)
   }
 
   var sortMenu: some View {
@@ -91,21 +83,12 @@ struct BookmarkView: View {
     }
   }
 
-  var actionsMenu: some View {
-    Menu {
-      Button {
-        renameText = model.title
-        showRenameAlert = true
-      } label: {
-        Label("Rename".localized, systemImage: "pencil")
-      }
-      Button(role: .destructive) {
-        showDeleteConfirm = true
-      } label: {
-        Label("Delete".localized, systemImage: "trash")
-      }
+  // Folder delete is the only management action kino.pub's API supports (no rename endpoint exists).
+  var deleteButton: some View {
+    Button(role: .destructive) {
+      showDeleteConfirm = true
     } label: {
-      Image(systemName: "ellipsis.circle")
+      Image(systemName: "trash")
     }
   }
 
@@ -117,7 +100,16 @@ struct BookmarkView: View {
         await model.refresh()
       }, navigationLinkProvider: { item in
         RouteLinkProvider().link(for: item)
-      }, statusOverlay: { AnyView(MediaCardStatusBadge(item: $0)) })
+      }, statusOverlay: { AnyView(MediaCardStatusBadge(item: $0)) },
+         contextMenu: { item in
+        AnyView(
+          Button(role: .destructive) {
+            Task { await model.removeFromFolder(item) }
+          } label: {
+            Label("Remove from folder".localized, systemImage: "bookmark.slash")
+          }
+        )
+      })
     }
   }
 }

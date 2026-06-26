@@ -34,6 +34,9 @@ struct Sidebar: View {
         ForEach(SidebarItem.libraryCategories, id: \.self) { type in
           row(.category(type))
         }
+        ForEach(CatalogPreset.allCases) { preset in
+          row(.preset(preset))
+        }
         row(.sport)
         row(.collections)
       }

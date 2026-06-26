@@ -7,11 +7,8 @@
 
 import Foundation
 
-/// Deletes a bookmark folder.
-///
-/// NOTE: best-effort endpoint. kino.pub's public docs don't fully spell out the folder-remove
-/// route, so this mirrors `ToggleBookmarkFolderRequest`'s GET + `forceSendAsGetParams` style and
-/// targets `/v1/bookmarks/{id}/remove`. Adjust the path if the API differs.
+/// Deletes a bookmark folder — `POST /v1/bookmarks/remove-folder?folder=<id>` (per kinoapi.com docs;
+/// verified live returning 200 and actually removing the folder).
 public struct RemoveBookmarkFolderRequest: Endpoint {
 
   public var id: Int
@@ -21,7 +18,7 @@ public struct RemoveBookmarkFolderRequest: Endpoint {
   }
 
   public var path: String {
-    "/v1/bookmarks/\(id)/remove"
+    "/v1/bookmarks/remove-folder"
   }
 
   public var method: String {
@@ -29,12 +26,13 @@ public struct RemoveBookmarkFolderRequest: Endpoint {
   }
 
   public var parameters: [String: Any]? {
-    nil
+    ["folder": id]
   }
 
   public var headers: [String: String]? {
     nil
   }
 
-  public var forceSendAsGetParams: Bool { true }
+  // `folder` is read from the form BODY only (verified live: body → 200, query → no-op).
+  public var forceSendAsGetParams: Bool { false }
 }

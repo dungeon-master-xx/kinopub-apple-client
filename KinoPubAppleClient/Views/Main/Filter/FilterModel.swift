@@ -14,11 +14,16 @@ import KinoPubLogging
 /// Lightweight value describing the active catalog filter consumed by `MediaCatalog`.
 struct MediaItemsFilter: Equatable, Hashable {
   var contentType: MediaType
+  /// Raw `type` override for presets that span several types (e.g. Anime = "movie,serial").
+  var rawType: String?
   var genres: [Int]
   var countries: [Int]
   var year: String?
   var age: String?
   var sort: String?
+  /// Filter by a director / actor name (used by the "More from … / More with …" detail shelves).
+  var director: String?
+  var cast: String?
 
   // Extended web-filter parameters. All optional so existing call sites keep working.
   var subtitles: String?

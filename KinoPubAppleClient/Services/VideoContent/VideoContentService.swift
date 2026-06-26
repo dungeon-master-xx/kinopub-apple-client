@@ -19,6 +19,7 @@ protocol VideoContentService {
   func fetchBookmarkItems(id: String) async throws -> ArrayData<MediaItem>
   func fetchHistory(page: Int?) async throws -> HistoryData
   func fetchWatchingSerials(subscribed: Int?, type: String?) async throws -> ArrayData<WatchingSerial>
+  func fetchWatchingMovies() async throws -> ArrayData<WatchingSerial>
   func fetchTVChannels() async throws -> [TVChannel]
   func fetchComments(for id: Int) async throws -> CommentsData
 }
@@ -77,6 +78,10 @@ struct VideoContentServiceMock: VideoContentService {
   }
 
   func fetchWatchingSerials(subscribed: Int?, type: String?) async throws -> ArrayData<WatchingSerial> {
+    return ArrayData.mock(data: [])
+  }
+
+  func fetchWatchingMovies() async throws -> ArrayData<WatchingSerial> {
     return ArrayData.mock(data: [])
   }
 

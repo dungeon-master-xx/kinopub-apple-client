@@ -50,6 +50,22 @@ enum WatchingEpisodesType: String, CaseIterable, Identifiable {
   var title: String { mediaType.title }
 }
 
+// Content-kind sub-tabs shown under "Watching" / "Я смотрю": serials you're subscribed to
+// (/v1/watching/serials?subscribed=1) vs movies you're part-way through (/v1/watching/movies).
+enum WatchlistKind: String, CaseIterable, Identifiable {
+  case serials
+  case movies
+
+  var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .serials: return "Series"
+    case .movies: return "Movies"
+    }
+  }
+}
+
 @MainActor
 class WatchingModel: ObservableObject {
 
@@ -64,6 +80,8 @@ class WatchingModel: ObservableObject {
   /// top-level destinations rather than tabs inside one screen.
   public let tab: WatchingTab
   @Published public var episodesType: WatchingEpisodesType = .serial
+  /// Serials vs movies sub-filter for the "Watching" / "Я смотрю" tab.
+  @Published public var watchlistKind: WatchlistKind = .serials
 
   init(itemsService: VideoContentService,
        authState: AuthState,
@@ -84,16 +102,24 @@ class WatchingModel: ObservableObject {
 
     isLoading = true
     do {
-      let data: ArrayData<WatchingSerial>
       switch tab {
       case .newEpisodes:
-        // New-episodes tab: unwatched serials with new episodes, narrowed by content type.
-        data = try await contentService.fetchWatchingSerials(subscribed: 0, type: episodesType.rawValue)
+        // New-episodes tab: unwatched serials with new episodes, narrowed by content type. The
+        // kino.pub endpoint ignores the `type` query param (returns all types regardless), so the
+        // sub-tab filter has to be applied on the client by the item's `type`.
+        let data = try await contentService.fetchWatchingSerials(subscribed: 0, type: episodesType.rawValue)
+        serials = data.items.filter { $0.type == episodesType.rawValue }
       case .watchlist:
-        // My-series tab: the full watchlist, all content types.
-        data = try await contentService.fetchWatchingSerials(subscribed: 1, type: nil)
+        // "Я смотрю": serials you're subscribed to, or movies you're part-way through.
+        switch watchlistKind {
+        case .serials:
+          let data = try await contentService.fetchWatchingSerials(subscribed: 1, type: nil)
+          serials = data.items
+        case .movies:
+          let data = try await contentService.fetchWatchingMovies()
+          serials = data.items
+        }
       }
-      serials = data.items
       isLoading = false
     } catch {
       Logger.app.debug("fetch watching serials error: \(error)")
@@ -107,6 +133,11 @@ class WatchingModel: ObservableObject {
     self.episodesType = episodesType
   }
 
+  func select(watchlistKind: WatchlistKind) {
+    guard watchlistKind != self.watchlistKind else { return }
+    self.watchlistKind = watchlistKind
+  }
+
   @Sendable @MainActor
   func refresh() async {
     errorHandler.reset()
@@ -114,11 +145,11 @@ class WatchingModel: ObservableObject {
     await fetchItems()
   }
 
-  // Refetch whenever the new-episodes content-type sub-tab changes.
+  // Refetch whenever the new-episodes content-type sub-tab or the watchlist serials/movies sub-tab changes.
   private func subscribeForReload() {
-    $episodesType
-      .removeDuplicates()
-      .dropFirst()
+    // Each @Published fires its current value on subscribe, so drop both initial emissions.
+    Publishers.Merge($episodesType.map { _ in () }, $watchlistKind.map { _ in () })
+      .dropFirst(2)
       .sink { [weak self] _ in
         self?.serials = []
         Task { await self?.fetchItems() }

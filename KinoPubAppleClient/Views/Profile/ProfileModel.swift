@@ -21,7 +21,24 @@ class ProfileModel: ObservableObject {
     @Published var selectedLanguage: String
     @Published var shouldShowExitAlert: Bool = false
     
-    let availableLanguages = ["en": "English", "lt": "Lietuvių", "ru": "Русский"]
+    let availableLanguages = [
+        "en": "English",
+        "ru": "Русский",
+        "uk": "Українська",
+        "be": "Беларуская",
+        "kk": "Қазақша",
+        "uz": "Oʻzbekcha",
+        "hy": "Հայերեն",
+        "az": "Azərbaycan",
+        "ka": "ქართული",
+        "lt": "Lietuvių",
+        "lv": "Latviešu",
+        "et": "Eesti",
+        "ky": "Кыргызча",
+        "tg": "Тоҷикӣ",
+        "tk": "Türkmençe",
+        "ro": "Română"
+    ]
     
     init(userService: UserService,
          errorHandler: ErrorHandler,

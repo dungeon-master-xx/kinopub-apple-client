@@ -26,7 +26,7 @@ struct MediaCardStatusBadge: View {
       && libraryState.movieWatched(itemId: item.id, serverWatched: (item.videos?.first?.watched ?? 0) > 0)
 
     HStack(spacing: 4) {
-      if watched { badge("checkmark.circle.fill") }
+      if watched { badge("eye.fill") }
       if downloaded {
         badge("arrow.down.circle.fill")
       } else if downloading {

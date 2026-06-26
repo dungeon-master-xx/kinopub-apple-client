@@ -34,6 +34,9 @@ struct CollectionsView: View {
   private var sectionContent: some View {
     content
       .kinoScreen("Collections".localized)
+      .toolbar {
+        ToolbarItem(placement: .primaryAction) { sortMenu }
+      }
       .task { await model.fetchCollections() }
       .refreshable { await model.refresh() }
       .handleError(state: $errorHandler.state)
@@ -41,11 +44,8 @@ struct CollectionsView: View {
 
   @ViewBuilder
   private var content: some View {
-    // Chips live inside the scroll view so the large title collapses; WidthReader feeds the grid.
     WidthReader { width in
       ScrollView {
-        sortTabs
-          .padding(.bottom, 4)
         if model.isLoading {
           placeholderGrid(width: width)
         } else if model.collections.isEmpty {
@@ -57,18 +57,19 @@ struct CollectionsView: View {
     }
   }
 
-  // MARK: - Sort tabs
+  // MARK: - Sort
 
-  private var sortTabs: some View {
-    FilterChipBar(items: CollectionsSort.allCases.map { FilterChipItem(id: $0.apiValue, title: $0.title) },
-                  selection: Binding(
-                    get: { model.selectedSort.apiValue },
-                    set: { value in
-                      if let sort = CollectionsSort.allCases.first(where: { $0.apiValue == value }) {
-                        model.selectedSort = sort
-                      }
-                    }
-                  ))
+  // Icon-only toolbar menu, matching the sort control used elsewhere (bookmarks, collection detail).
+  private var sortMenu: some View {
+    Menu {
+      Picker("Sort".localized, selection: $model.selectedSort) {
+        ForEach(CollectionsSort.allCases) { sort in
+          Text(sort.title).tag(sort)
+        }
+      }
+    } label: {
+      Image(systemName: "arrow.up.arrow.down")
+    }
   }
 
   private func grid(width: CGFloat) -> some View {

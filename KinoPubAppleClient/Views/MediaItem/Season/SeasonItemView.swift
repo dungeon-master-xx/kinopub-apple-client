@@ -71,7 +71,7 @@ public struct SeasonItemView: View {
   @ViewBuilder
   var watchIndicator: some View {
     if episode.watched > 0 {
-      indicatorImage(systemName: "checkmark.circle.fill")
+      indicatorImage(systemName: "eye.fill")
     } else if episode.watching.time > 0 {
       indicatorImage(systemName: "circle.lefthalf.filled")
     }
@@ -95,7 +95,7 @@ public struct SeasonItemView: View {
 #endif
     // Picker to select quality of the episode to download
     .confirmationDialog("", isPresented: $showDownloadPicker, titleVisibility: .hidden) {
-      ForEach(episode.files) { file in
+      ForEach(episode.files.dedupedByQuality) { file in
         Button(file.quality) {
           onDownload?(file)
         }

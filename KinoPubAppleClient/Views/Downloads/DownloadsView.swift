@@ -109,7 +109,8 @@ struct DownloadsView: View {
       .padding(.horizontal, 14)
       .padding(.vertical, 7)
       .glassCapsule()
-      .listRowInsets(EdgeInsets(top: 8, leading: 4, bottom: 6, trailing: 4))
+      // Match the History sticky headers' left indent (20pt), not the List's default tight inset.
+      .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 6, trailing: 4))
       .listRowBackground(Color.clear)
   }
 
@@ -208,7 +209,7 @@ struct DownloadsView: View {
 /// A breakdown of the app's on-disk usage so the user can see where space goes (HLS downloads live in
 /// Library — invisible to the Files app — and keep every audio track, so they're bigger than the
 /// source). Lets the user clear the image cache and sweep orphaned download files.
-private struct StorageBreakdownView: View {
+struct StorageBreakdownView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.appContext) private var appContext
   @State private var breakdown: StorageUsage?

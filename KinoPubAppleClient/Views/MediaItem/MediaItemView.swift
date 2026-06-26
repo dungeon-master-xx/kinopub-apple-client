@@ -26,6 +26,13 @@ struct MediaItemView: View {
   @State private var plotExpanded: Bool = false
   @State private var selectedSeasonNumber: Int?
   @State private var showComments: Bool = false
+  @State private var showCastCrew: Bool = false
+  @State private var showFacts: Bool = false
+  @State private var showReviews: Bool = false
+  /// Non-nil when the full-screen stills viewer is open, holding the index being shown.
+  @State private var stillSelection: StillSelection?
+  @State private var showCreateFolder: Bool = false
+  @State private var newFolderName: String = ""
 
   init(model: @autoclosure @escaping () -> MediaItemModel) {
     _itemModel = StateObject(wrappedValue: model())
@@ -83,9 +90,14 @@ struct MediaItemView: View {
         hero
         episodesSection
         trailersSection
-        relatedSection
+        imagesSection
         castSection
         descriptionSection
+        factsSection
+        reviewsSection
+        relatedSection
+        moreFromDirectorSection
+        moreWithActorSection
         infoSection
         commentsSection
       }
@@ -95,6 +107,23 @@ struct MediaItemView: View {
     .background(Color.KinoPub.background)
     .sheet(isPresented: $showComments) {
       CommentsView(mediaId: mediaItem.id)
+    }
+    .sheet(isPresented: $showCastCrew) {
+      CastCrewView(directors: itemModel.directorNames, actors: itemModel.castNames, staff: itemModel.staff)
+    }
+    .sheet(isPresented: $showFacts) {
+      FactsView(facts: itemModel.facts)
+    }
+    .sheet(isPresented: $showReviews) {
+      ReviewsView(reviews: itemModel.reviews)
+    }
+    .sheet(item: $stillSelection) { selection in
+      StillsViewer(images: itemModel.images, startIndex: selection.index)
+    }
+    .alert("New folder".localized, isPresented: $showCreateFolder) {
+      TextField("Folder name".localized, text: $newFolderName)
+      Button("Cancel".localized, role: .cancel) {}
+      Button("Create".localized) { itemModel.createFolderAndAdd(named: newFolderName) }
     }
     .toast(message: $itemModel.toastMessage)
     #if os(iOS)
@@ -115,7 +144,6 @@ struct MediaItemView: View {
     .onChange(of: itemModel.itemLoaded) { loaded in
       if loaded {
         appContext.localProgressStore.cacheItem(itemModel.mediaItem)
-        Task { await itemModel.loadCastPhotos() }
       }
     }
     .handleError(state: $errorHandler.state)
@@ -124,7 +152,7 @@ struct MediaItemView: View {
   // MARK: - Hero
 
   private var hero: some View {
-    HeroBackdrop(imageURL: mediaItem.posters.wide ?? mediaItem.posters.big, height: 460, tallBlur: true, blurReduction: 50) {
+    HeroBackdrop(imageURL: mediaItem.posters.wide ?? mediaItem.posters.big, height: 552, tallBlur: true, blurReduction: 50) {
       VStack(alignment: .leading, spacing: 10) {
         Text(mediaItem.localizedTitle)
           .font(.system(size: 34, weight: .bold))
@@ -154,10 +182,16 @@ struct MediaItemView: View {
 
         MetadataRow(items: heroBadges)
 
-        // Reuse the КП / IMDb badges from the tiles in the hero (no background pill here).
-        ContentItemRatingView(imdbScore: mediaItem.imdbRating,
-                              kinopoiskScore: mediaItem.kinopoiskRating,
-                              showsBackground: false)
+        // kino.pub / КП / IMDb badges in the hero (no background pill here).
+        // Ratings + the user's like/dislike, side by side — wraps to two rows on narrow screens.
+        let ratings = ContentItemRatingView(imdbScore: mediaItem.imdbRating,
+                                            kinopoiskScore: mediaItem.kinopoiskRating,
+                                            kinopubScore: mediaItem.ratingPercentage > 0 ? mediaItem.ratingPercentage / 10.0 : nil,
+                                            showsBackground: false)
+        ViewThatFits(in: .horizontal) {
+          HStack(spacing: 12) { ratings; voteControl }
+          VStack(alignment: .leading, spacing: 8) { ratings; voteControl }
+        }
 
         heroActions
           .padding(.top, 6)
@@ -242,15 +276,8 @@ struct MediaItemView: View {
     }
     bookmarkMenu
     downloadButton
-    if mediaItem.trailer?.url != nil {
-      NavigationLink(value: itemModel.linkProvider.trailerPlayer(for: mediaItem)) {
-        circleIcon("film")
-      }
-      #if os(macOS)
-      .buttonStyle(.plain)
-      #endif
-      .accessibilityLabel("Trailer")
-    }
+    // Trailer button removed from the hero — the Trailers shelf below already exposes it.
+    // Like/dislike moved next to the ratings (see `voteControl`).
   }
 
   private var watchlistButton: some View {
@@ -260,6 +287,45 @@ struct MediaItemView: View {
                             accessibility: inWatchlist ? "Remove from Watchlist" : "Add to Watchlist") {
       itemModel.toggleWatchlist()
     }
+  }
+
+  /// Like / dislike pills with their counts, shown next to the ratings. kino.pub voting is one-time.
+  private var voteControl: some View {
+    HStack(spacing: 8) {
+      voteButton(up: true)
+      voteButton(up: false)
+    }
+  }
+
+  private func voteButton(up: Bool) -> some View {
+    let active = itemModel.myVote == (up ? .up : .down)
+    let count = up ? itemModel.likeCount : itemModel.dislikeCount
+    let filled = up ? "hand.thumbsup.fill" : "hand.thumbsdown.fill"
+    let outline = up ? "hand.thumbsup" : "hand.thumbsdown"
+    // Active like uses the kino.pub chip colour so it reads as part of the rating; dislike turns red.
+    let activeColor: Color = up ? RatingBrand.kinopubTeal : Color(red: 0.88, green: 0.36, blue: 0.36)
+    let activeForeground: Color = up ? .black : .white
+    return Button {
+      itemModel.vote(up: up)
+    } label: {
+      HStack(spacing: 5) {
+        Image(systemName: active ? filled : outline)
+          .font(.system(size: 13, weight: .semibold))
+        if count > 0 {
+          Text(NumberFormatter.localizedString(from: NSNumber(value: count), number: .decimal))
+            .font(.system(size: 13, weight: .semibold))
+        }
+      }
+      .foregroundStyle(active ? activeForeground : Color.KinoPub.text)
+      .padding(.horizontal, 11)
+      .padding(.vertical, 6)
+      .background(Capsule(style: .continuous)
+        .fill(active ? activeColor : Color.KinoPub.selectionBackground))
+    }
+#if os(macOS)
+    .buttonStyle(.plain)
+#endif
+    .accessibilityLabel(up ? "Like" : "Dislike")
   }
 
   private var watchedButton: some View {
@@ -272,31 +338,36 @@ struct MediaItemView: View {
 
   @ViewBuilder
   private var bookmarkMenu: some View {
-    if !libraryState.bookmarkFolders.isEmpty {
-      Menu {
-        ForEach(libraryState.bookmarkFolders) { folder in
-          let isOn = libraryState.isBookmarked(itemId: mediaItem.id, folderId: folder.id)
-          Button {
-            itemModel.toggleBookmark(folderId: folder.id, folderTitle: folder.title)
-          } label: {
-            // A checkmark marks folders this item is already in (was previously write-only/blind).
-            if isOn {
-              Label(folder.title, systemImage: "checkmark")
-            } else {
-              Text(folder.title)
-            }
+    Menu {
+      ForEach(libraryState.bookmarkFolders) { folder in
+        let isOn = libraryState.isBookmarked(itemId: mediaItem.id, folderId: folder.id)
+        Button {
+          itemModel.toggleBookmark(folderId: folder.id, folderTitle: folder.title)
+        } label: {
+          // A checkmark marks folders this item is already in (was previously write-only/blind).
+          if isOn {
+            Label(folder.title, systemImage: "checkmark")
+          } else {
+            Text(folder.title)
           }
         }
-      } label: {
-        // Fill the icon when the item is in at least one folder.
-        circleIcon(libraryState.isInAnyBookmarkFolder(itemId: mediaItem.id) ? "folder.fill" : "folder")
       }
-      #if os(macOS)
-      .menuStyle(.borderlessButton)
-      .fixedSize()
-      #endif
-      .accessibilityLabel("Add to Bookmark")
+      Divider()
+      Button {
+        newFolderName = ""
+        showCreateFolder = true
+      } label: {
+        Label("New folder…".localized, systemImage: "folder.badge.plus")
+      }
+    } label: {
+      // Fill the icon when the item is in at least one folder.
+      circleIcon(libraryState.isInAnyBookmarkFolder(itemId: mediaItem.id) ? "folder.fill" : "folder")
     }
+    #if os(macOS)
+    .menuStyle(.borderlessButton)
+    .fixedSize()
+    #endif
+    .accessibilityLabel("Add to Bookmark")
   }
 
   private var downloadButton: some View {
@@ -531,7 +602,7 @@ struct MediaItemView: View {
 
   @ViewBuilder
   private func qualityButtons(for item: DownloadableMediaItem) -> some View {
-    ForEach(item.files) { file in
+    ForEach(item.files.dedupedByQuality) { file in
       Button(file.quality) {
         itemModel.startDownload(item: item, file: file)
       }
@@ -599,9 +670,12 @@ struct MediaItemView: View {
                               progress: episodeProgress(episode, in: season))
                   .overlay(alignment: .topTrailing) {
                     if itemModel.isEpisodeWatched(episode) {
-                      Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.white, Color.KinoPub.accent)
+                      // Neutral "watched" eye (not the loud accent checkmark).
+                      Image(systemName: "eye.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(6)
+                        .background(Circle().fill(.black.opacity(0.5)))
                         .padding(8)
                     }
                   }
@@ -621,7 +695,7 @@ struct MediaItemView: View {
                   } label: {
                     let watched = itemModel.isEpisodeWatched(episode)
                     Label(watched ? "Mark as Unwatched".localized : "Mark as Watched".localized,
-                          systemImage: watched ? "checkmark.circle" : "circle")
+                          systemImage: watched ? "eye.fill" : "eye")
                   }
                   episodeDownloadMenu(episode, in: season)
                 } preview: {
@@ -676,7 +750,8 @@ struct MediaItemView: View {
           let target = lastWatchedEpisode(in: seasons),
           target.season.number == currentSeason(in: seasons).number else { return }
     withAnimation {
-      proxy.scrollTo(target.episode.id, anchor: .leading)
+      // Center the current episode horizontally so it's the focus when the series page opens.
+      proxy.scrollTo(target.episode.id, anchor: .center)
     }
   }
 
@@ -767,29 +842,173 @@ struct MediaItemView: View {
     }
   }
 
+  // MARK: - More from director / with actor
+
+  @ViewBuilder
+  private func peopleShelf(_ title: String, items: [MediaItem]) -> some View {
+    if !items.isEmpty {
+      MediaShelf(title: title, showsChevron: false) {
+        ForEach(items) { item in
+          NavigationLink(value: itemModel.linkProvider.link(for: item)) {
+            PosterCard(imageURL: item.posters.medium, title: item.localizedTitle)
+              .overlay(alignment: .topTrailing) { MediaCardStatusBadge(item: item) }
+          }
+          #if os(macOS)
+          .buttonStyle(.plain)
+          #endif
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var moreFromDirectorSection: some View {
+    if let director = itemModel.primaryDirector {
+      peopleShelf(String(format: "More from %@".localized, director), items: itemModel.moreFromDirector)
+    }
+  }
+
+  @ViewBuilder
+  private var moreWithActorSection: some View {
+    if let actor = itemModel.primaryActor {
+      peopleShelf(String(format: "More with %@".localized, actor), items: itemModel.moreWithActor)
+    }
+  }
+
   // MARK: - Cast & Crew
 
   @ViewBuilder
   private var castSection: some View {
-    let actors = Array(itemModel.castNames.prefix(12))
-    let directors = mediaItem.director
-      .split(separator: ",")
-      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-      .filter { !$0.isEmpty }
+    // Prefer the richer Kinopoisk crew (photos + characters + English names) when available,
+    // falling back to kino.pub's plain cast/director names.
+    if !itemModel.staff.isEmpty {
+      staffShelf
+    } else {
+      castNamesShelf
+    }
+  }
+
+  private var staffShelf: some View {
+    let top = Array(itemModel.staff.prefix(14))
+    return MediaShelf(title: "Cast & Crew".localized,
+                      showsChevron: itemModel.staff.count > top.count,
+                      onHeaderTap: { showCastCrew = true }) {
+      ForEach(top) { member in
+        facetLink(staffRoute(member)) {
+          CastAvatarView(imageURL: member.posterUrl,
+                         name: member.displayName,
+                         role: staffRole(member))
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var castNamesShelf: some View {
+    let directors = itemModel.directorNames
+    let allActors = itemModel.castNames
+    let actors = Array(allActors.prefix(12))
+    let hasMore = allActors.count > actors.count
     if !actors.isEmpty || !directors.isEmpty {
-      MediaShelf(title: "Cast & Crew".localized, showsChevron: false) {
+      MediaShelf(title: "Cast & Crew".localized,
+                 showsChevron: hasMore,
+                 onHeaderTap: hasMore ? { showCastCrew = true } : nil) {
         ForEach(directors, id: \.self) { name in
           facetLink(itemModel.directorRoute(name)) {
-            CastAvatarView(imageURL: itemModel.personImages[name]?.absoluteString,
+            CastAvatarView(imageURL: ActorImageProvider.photoURLString(for: name),
                            name: name, role: "Director".localized)
           }
         }
         ForEach(actors, id: \.self) { name in
           facetLink(itemModel.actorRoute(name)) {
-            CastAvatarView(imageURL: itemModel.personImages[name]?.absoluteString,
+            CastAvatarView(imageURL: ActorImageProvider.photoURLString(for: name),
                            name: name, role: "Actor".localized)
           }
         }
+      }
+    }
+  }
+
+  /// For an actor show the character (`description`); for crew show the profession.
+  private func staffRole(_ member: KpStaffMember) -> String? {
+    let character = member.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    if !character.isEmpty { return character }
+    return member.professionText
+  }
+
+  private func staffRoute(_ member: KpStaffMember) -> (any Hashable)? {
+    member.professionKey == "DIRECTOR"
+      ? itemModel.directorRoute(member.displayName)
+      : itemModel.actorRoute(member.displayName)
+  }
+
+  // MARK: - Kinopoisk extras (stills / facts / reviews)
+
+  /// A titled vertical section header with an optional "see all" chevron, matching the shelf headers.
+  private func extrasHeader(_ title: String, action: (() -> Void)?) -> some View {
+    Button(action: { action?() }) {
+      HStack(spacing: 6) {
+        Text(title)
+          .font(.system(size: 22, weight: .bold))
+          .foregroundStyle(Color.KinoPub.text)
+        if action != nil {
+          Image(systemName: "chevron.right")
+            .font(.system(size: 15, weight: .bold))
+            .foregroundStyle(Color.KinoPub.subtitle)
+        }
+        Spacer(minLength: 0)
+      }
+      .contentShape(Rectangle())
+      .padding(.horizontal, 20)
+    }
+    .buttonStyle(.plain)
+    .disabled(action == nil)
+  }
+
+  @ViewBuilder
+  private var imagesSection: some View {
+    if !itemModel.images.isEmpty {
+      let preview = Array(itemModel.images.prefix(15))
+      let hasMore = itemModel.images.count > preview.count
+      MediaShelf(title: "Images".localized,
+                 showsChevron: hasMore,
+                 onHeaderTap: hasMore ? { stillSelection = StillSelection(index: 0) } : nil) {
+        ForEach(Array(preview.enumerated()), id: \.offset) { idx, image in
+          Button { stillSelection = StillSelection(index: idx) } label: {
+            StillThumbnail(url: image.previewUrl ?? image.imageUrl)
+          }
+          .buttonStyle(.plain)
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var factsSection: some View {
+    if !itemModel.facts.isEmpty {
+      VStack(alignment: .leading, spacing: 14) {
+        extrasHeader("Facts".localized, action: itemModel.facts.count > 3 ? { showFacts = true } : nil)
+        VStack(spacing: 10) {
+          ForEach(itemModel.facts.prefix(3)) { fact in
+            FactCard(fact: fact)
+          }
+        }
+        .padding(.horizontal, 20)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var reviewsSection: some View {
+    if !itemModel.reviews.items.isEmpty {
+      VStack(alignment: .leading, spacing: 14) {
+        extrasHeader("Reviews".localized, action: itemModel.reviews.items.count > 2 ? { showReviews = true } : nil)
+        VStack(spacing: 10) {
+          ForEach(itemModel.reviews.items.prefix(2)) { review in
+            ReviewCard(review: review)
+          }
+        }
+        .padding(.horizontal, 20)
       }
     }
   }
@@ -989,12 +1208,14 @@ private struct MediaItemInfoSection: View {
         }
       }
 
-      if (mediaItem.imdbRating ?? 0) > 0 || (mediaItem.kinopoiskRating ?? 0) > 0 {
+      if (mediaItem.imdbRating ?? 0) > 0 || (mediaItem.kinopoiskRating ?? 0) > 0 || (kinopubScore ?? 0) > 0 {
         VStack(alignment: .leading, spacing: 4) {
           Text("Rating".localized.uppercased())
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(Color.KinoPub.subtitle)
-          RatingsDetailRow(imdbScore: mediaItem.imdbRating,
+          RatingsDetailRow(kinopubScore: kinopubScore,
+                           kinopubVotes: mediaItem.ratingVotes,
+                           imdbScore: mediaItem.imdbRating,
                            imdbVotes: mediaItem.imdbVotes,
                            kinopoiskScore: mediaItem.kinopoiskRating,
                            kinopoiskVotes: mediaItem.kinopoiskVotes)
@@ -1156,6 +1377,11 @@ private struct MediaItemInfoSection: View {
 
   // MARK: - Deep links (issue #44)
 
+  /// kino.pub's own rating on a 0–10 scale (the API gives it as a 0–100 percentage). nil when unrated.
+  private var kinopubScore: Double? {
+    mediaItem.ratingPercentage > 0 ? mediaItem.ratingPercentage / 10.0 : nil
+  }
+
   private var imdbURL: URL? {
     guard let imdb = mediaItem.imdb, imdb > 0 else { return nil }
     return URL(string: "https://www.imdb.com/title/tt\(String(format: "%07d", imdb))/")
@@ -1164,6 +1390,391 @@ private struct MediaItemInfoSection: View {
   private var kinopoiskURL: URL? {
     guard let kinopoisk = mediaItem.kinopoisk, kinopoisk > 0 else { return nil }
     return URL(string: "https://www.kinopoisk.ru/film/\(kinopoisk)/")
+  }
+}
+
+/// Full "Cast & Crew" roster, shown when the user taps the shelf header. Apple-TV-style grouped grid
+/// of circular avatars. Prefers the Kinopoisk crew (photos + characters, grouped by profession);
+/// falls back to kino.pub's plain director/actor names with CDN photos.
+struct CastCrewView: View {
+  let directors: [String]
+  let actors: [String]
+  let staff: [KpStaffMember]
+  @Environment(\.dismiss) private var dismiss
+
+  private let columns = [GridItem(.adaptive(minimum: 100), spacing: 14, alignment: .top)]
+
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        VStack(alignment: .leading, spacing: 28) {
+          if !staff.isEmpty {
+            staffContent
+          } else {
+            if !directors.isEmpty { namesSection(title: "Directors".localized, names: directors) }
+            if !actors.isEmpty { namesSection(title: "Cast".localized, names: actors) }
+          }
+        }
+        .padding(.vertical, 16)
+      }
+      .background(Color.KinoPub.background)
+      .navigationTitle("Cast & Crew".localized)
+#if os(iOS)
+      .navigationBarTitleDisplayMode(.inline)
+#endif
+      .toolbar {
+        ToolbarItem(placement: .confirmationAction) {
+          Button("Done".localized) { dismiss() }
+        }
+      }
+    }
+  }
+
+  /// Kinopoisk crew grouped by profession ("Режиссёры", "Актёры", …), preserving the API order.
+  @ViewBuilder
+  private var staffContent: some View {
+    let groups = orderedProfessionGroups
+    ForEach(groups, id: \.0) { profession, members in
+      VStack(alignment: .leading, spacing: 14) {
+        sectionTitle(profession)
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 22) {
+          ForEach(members) { member in
+            CastAvatarView(imageURL: member.posterUrl,
+                           name: member.displayName,
+                           role: member.description?.isEmpty == false ? member.description : nil,
+                           diameter: 80)
+          }
+        }
+        .padding(.horizontal, 20)
+      }
+    }
+  }
+
+  private var orderedProfessionGroups: [(String, [KpStaffMember])] {
+    var order: [String] = []
+    var map: [String: [KpStaffMember]] = [:]
+    for member in staff {
+      let key = (member.professionText ?? "—")
+      if map[key] == nil { order.append(key) }
+      map[key, default: []].append(member)
+    }
+    return order.map { ($0, map[$0] ?? []) }
+  }
+
+  @ViewBuilder
+  private func namesSection(title: String, names: [String]) -> some View {
+    VStack(alignment: .leading, spacing: 14) {
+      sectionTitle(title)
+      LazyVGrid(columns: columns, alignment: .leading, spacing: 22) {
+        ForEach(names, id: \.self) { name in
+          CastAvatarView(imageURL: ActorImageProvider.photoURLString(for: name),
+                         name: name, diameter: 80)
+        }
+      }
+      .padding(.horizontal, 20)
+    }
+  }
+
+  private func sectionTitle(_ text: String) -> some View {
+    Text(text)
+      .font(.system(size: 20, weight: .bold))
+      .foregroundStyle(Color.KinoPub.text)
+      .padding(.horizontal, 20)
+  }
+}
+
+// MARK: - Kinopoisk extras: components & sheets
+
+/// Identifiable wrapper so the stills viewer can be presented via `.sheet(item:)`.
+struct StillSelection: Identifiable {
+  let index: Int
+  var id: Int { index }
+}
+
+/// A 16:9 still thumbnail for the Images shelf.
+struct StillThumbnail: View {
+  let url: String?
+  var body: some View {
+    Color.KinoPub.skeleton
+      .frame(width: 200, height: 112)
+      .overlay {
+        CachedAsyncImage(url: URL(string: url ?? "")) { image in
+          image.resizable().aspectRatio(contentMode: .fill)
+        } placeholder: {
+          Color.KinoPub.skeleton
+        }
+      }
+      .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+  }
+}
+
+/// A single trivia fact / goof card. The icon is chosen from trigger words in the text (money, awards,
+/// camera, cast, music, …) and sits in a tinted rounded square — iOS Settings / App Store style.
+struct FactCard: View {
+  let fact: KpFact
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 12) {
+      let glyph = FactGlyph.for(fact)
+      Image(systemName: glyph.symbol)
+        .font(.system(size: 16, weight: .medium))
+        .foregroundStyle(glyph.color.opacity(0.85))
+        .frame(width: 22, alignment: .center)
+        .padding(.top, 1)
+      Text(KinopoiskText.plain(fact.text))
+        .font(.system(size: 14))
+        .foregroundStyle(Color.KinoPub.text)
+        .lineSpacing(2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.leading)
+    }
+    .padding(14)
+    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.KinoPub.selectionBackground))
+  }
+}
+
+/// Maps a fact's text to a tasteful SF Symbol + tint by scanning for trigger words (Russian + a few
+/// English). First match wins, so the list is ordered most-specific → general.
+enum FactGlyph {
+  static func `for`(_ fact: KpFact) -> (symbol: String, color: Color) {
+    let text = fact.text.lowercased()
+    func has(_ words: [String]) -> Bool { words.contains { text.contains($0) } }
+
+    if fact.isBlooper { return ("exclamationmark.bubble.fill", Color(red: 0.45, green: 0.48, blue: 0.55)) }
+    if has(["оскар", "преми", "награ", "номина", "глобус", "канн", "бафта", "пальм"]) {
+      return ("trophy.fill", Color(red: 0.84, green: 0.66, blue: 0.16))
+    }
+    if has(["бюджет", "млн", "миллион", "миллиард", "доллар", "гонорар", "сбор", "касс", "$", "заработа", "стои"]) {
+      return ("dollarsign.circle.fill", Color(red: 0.20, green: 0.70, blue: 0.42))
+    }
+    if has(["роль", "сыгра", "актёр", "актер", "актрис", "кастинг", "пробы", "дублёр", "дублер", "каскадёр", "каскадер", "сниматься"]) {
+      return ("theatermasks.fill", Color(red: 0.56, green: 0.36, blue: 0.80))
+    }
+    if has(["режиссёр", "режиссер", "постанов", "снял фильм", "снимать фильм"]) {
+      return ("megaphone.fill", Color(red: 0.95, green: 0.56, blue: 0.20))
+    }
+    if has(["камер", "плёнк", "пленк", "imax", "кадр", "съёмк", "съемк", "оператор", "объектив", "снима"]) {
+      return ("camera.fill", Color(red: 0.20, green: 0.55, blue: 0.92))
+    }
+    if has(["музык", "саундтрек", "композитор", "песн", "мелоди", "звук"]) {
+      return ("music.note", Color(red: 0.92, green: 0.36, blue: 0.56))
+    }
+    if has(["книг", "сценари", "роман", "основан на", "по мотивам", "автор"]) {
+      return ("book.fill", Color(red: 0.30, green: 0.62, blue: 0.60))
+    }
+    if has(["компьютер", "cgi", "эффект", "график", "грим", "технолог", "взрыв"]) {
+      return ("wand.and.stars", Color(red: 0.38, green: 0.42, blue: 0.86))
+    }
+    if has(["травм", "погиб", "опасн", "ранен", "несчаст", "пострада"]) {
+      return ("exclamationmark.triangle.fill", Color(red: 0.88, green: 0.32, blue: 0.32))
+    }
+    if has(["впервые", "рекорд", "первый", "единствен", "самый"]) {
+      return ("star.fill", Color(red: 0.95, green: 0.74, blue: 0.20))
+    }
+    if has(["язык", "перевод", "дубляж", "стран"]) {
+      return ("globe", Color(red: 0.18, green: 0.66, blue: 0.66))
+    }
+    if has(["час", "минут", "год", " лет", "длил", "снимал"]) {
+      return ("clock.fill", Color(red: 0.42, green: 0.52, blue: 0.64))
+    }
+    return ("lightbulb.fill", Color(red: 0.95, green: 0.66, blue: 0.18))
+  }
+}
+
+/// A review card with an editorial serif body, clamped to 4 lines and expandable in place.
+struct ReviewCard: View {
+  let review: KpReview
+  @State private var expanded = false
+
+  private var bodyText: String { KinopoiskText.plain(review.description ?? "") }
+  /// Kinopoisk reviews are long-form; show the expand toggle when the body clearly exceeds ~4 lines.
+  private var isExpandable: Bool { bodyText.count > 220 }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      // Sentiment dot + author + date.
+      HStack(spacing: 7) {
+        Circle().fill(typeColor).frame(width: 7, height: 7)
+        Text(review.author ?? "Аноним".localized)
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(Color.KinoPub.text)
+          .lineLimit(1)
+        if let date = formattedDate {
+          Text("·").font(.system(size: 12)).foregroundStyle(Color.KinoPub.subtitle)
+          Text(date).font(.system(size: 12)).foregroundStyle(Color.KinoPub.subtitle)
+        }
+        Spacer(minLength: 0)
+      }
+
+      if let title = review.title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty {
+        Text(title)
+          .font(.system(.headline, design: .serif).weight(.semibold))
+          .foregroundStyle(Color.KinoPub.text)
+          .lineLimit(2)
+          .multilineTextAlignment(.leading)
+      }
+
+      Text(bodyText)
+        .font(.system(.subheadline, design: .serif))
+        .foregroundStyle(Color.KinoPub.text.opacity(0.92))
+        .lineSpacing(3)
+        .lineLimit(expanded ? nil : 4)
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+      if isExpandable {
+        Button(expanded ? "Show less".localized : "Show more".localized) {
+          withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() }
+        }
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(Color.KinoPub.accent)
+        .buttonStyle(.plain)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(16)
+    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.KinoPub.selectionBackground))
+  }
+
+  private var typeColor: Color {
+    switch (review.type ?? "").uppercased() {
+    case "POSITIVE": return Color(red: 0.30, green: 0.78, blue: 0.45)
+    case "NEGATIVE": return Color(red: 0.90, green: 0.36, blue: 0.36)
+    default: return Color.KinoPub.subtitle
+    }
+  }
+
+  private var formattedDate: String? {
+    guard let raw = review.date, !raw.isEmpty else { return nil }
+    let parser = DateFormatter()
+    parser.locale = Locale(identifier: "en_US_POSIX")
+    parser.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+    guard let date = parser.date(from: raw) else { return nil }
+    let out = DateFormatter()
+    out.dateStyle = .long
+    out.timeStyle = .none
+    return out.string(from: date)
+  }
+}
+
+/// Full Facts sheet.
+struct FactsView: View {
+  let facts: [KpFact]
+  @Environment(\.dismiss) private var dismiss
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        VStack(spacing: 10) {
+          ForEach(facts) { FactCard(fact: $0) }
+        }
+        .padding(16)
+      }
+      .background(Color.KinoPub.background)
+      .navigationTitle("Facts".localized)
+#if os(iOS)
+      .navigationBarTitleDisplayMode(.inline)
+#endif
+      .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done".localized) { dismiss() } } }
+    }
+  }
+}
+
+/// Full Reviews sheet.
+struct ReviewsView: View {
+  let reviews: KpReviewsPage
+  @Environment(\.dismiss) private var dismiss
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        VStack(spacing: 12) {
+          ForEach(reviews.items) { review in
+            ReviewCard(review: review)
+          }
+        }
+        .padding(16)
+      }
+      .background(Color.KinoPub.background)
+      .navigationTitle("Reviews".localized)
+#if os(iOS)
+      .navigationBarTitleDisplayMode(.inline)
+#endif
+      .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done".localized) { dismiss() } } }
+    }
+  }
+}
+
+/// Full-screen swipeable stills viewer.
+struct StillsViewer: View {
+  let images: [KpImage]
+  let startIndex: Int
+  @Environment(\.dismiss) private var dismiss
+  @State private var index: Int
+
+  init(images: [KpImage], startIndex: Int) {
+    self.images = images
+    self.startIndex = startIndex
+    _index = State(initialValue: startIndex)
+  }
+
+  var body: some View {
+    NavigationStack {
+      TabView(selection: $index) {
+        ForEach(Array(images.enumerated()), id: \.offset) { i, image in
+          CachedAsyncImage(url: URL(string: image.imageUrl ?? image.previewUrl ?? "")) { img in
+            img.resizable().aspectRatio(contentMode: .fit)
+          } placeholder: {
+            ProgressView()
+          }
+          .tag(i)
+        }
+      }
+#if os(iOS)
+      .tabViewStyle(.page(indexDisplayMode: .automatic))
+#endif
+      .background(Color.black.ignoresSafeArea())
+      .navigationTitle("\(min(index + 1, images.count)) / \(images.count)")
+#if os(iOS)
+      .navigationBarTitleDisplayMode(.inline)
+#endif
+      .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done".localized) { dismiss() } } }
+    }
+  }
+}
+
+/// Light HTML→plain-text cleanup for Kinopoisk facts / review bodies (tags + named & numeric entities).
+enum KinopoiskText {
+  static func plain(_ html: String) -> String {
+    var s = html.replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
+    let entities = ["&nbsp;": " ", "&mdash;": "—", "&ndash;": "–", "&laquo;": "«", "&raquo;": "»",
+                    "&quot;": "\"", "&hellip;": "…", "&amp;": "&", "&lt;": "<", "&gt;": ">",
+                    "&rsquo;": "’", "&lsquo;": "‘", "&ldquo;": "“", "&rdquo;": "”"]
+    for (k, v) in entities { s = s.replacingOccurrences(of: k, with: v) }
+    s = decodeNumericEntities(s)
+    s = s.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+    return s.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+
+  /// Replace decimal (`&#171;`) and hex (`&#xAB;`) HTML character references with their characters.
+  private static func decodeNumericEntities(_ s: String) -> String {
+    guard s.contains("&#"), let regex = try? NSRegularExpression(pattern: "&#(x?)([0-9a-fA-F]+);") else { return s }
+    let ns = s as NSString
+    let matches = regex.matches(in: s, range: NSRange(location: 0, length: ns.length))
+    guard !matches.isEmpty else { return s }
+    var result = ""
+    var cursor = 0
+    for m in matches {
+      result += ns.substring(with: NSRange(location: cursor, length: m.range.location - cursor))
+      let isHex = !ns.substring(with: m.range(at: 1)).isEmpty
+      let digits = ns.substring(with: m.range(at: 2))
+      if let code = UInt32(digits, radix: isHex ? 16 : 10), let scalar = Unicode.Scalar(code) {
+        result.unicodeScalars.append(scalar)
+      } else {
+        result += ns.substring(with: m.range)  // malformed — leave untouched
+      }
+      cursor = m.range.location + m.range.length
+    }
+    result += ns.substring(from: cursor)
+    return result
   }
 }
 

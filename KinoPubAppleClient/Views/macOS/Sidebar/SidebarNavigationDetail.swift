@@ -26,6 +26,14 @@ struct SidebarNavigationDetail: View {
     case .category(let type):
       mainCatalog(contentType: type, shortcut: .hot)
         .id("library-\(type.rawValue)")
+    case .preset(let preset):
+      FilteredCatalogView(catalog: MediaCatalog(itemsService: appContext.contentService,
+                                                authState: authState,
+                                                errorHandler: errorHandler,
+                                                filter: preset.filter),
+                          title: preset.title.localized,
+                          linkProvider: RouteLinkProvider())
+        .id("preset-\(preset.rawValue)")
     case .sport:
       sport
     case .collections:
@@ -73,6 +81,7 @@ struct SidebarNavigationDetail: View {
 
   var sport: some View {
     SportView(model: SportModel(itemsService: appContext.contentService,
+                                epgService: appContext.epgService,
                                 authState: authState,
                                 errorHandler: errorHandler))
   }
