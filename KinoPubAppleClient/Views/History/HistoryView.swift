@@ -23,14 +23,8 @@ struct HistoryView: View {
 
   var body: some View {
     NavigationStack(path: $navigationState.historyRoutes) {
-      VStack(spacing: 0) {
-        if !catalog.isLoadingSkeleton && !catalog.availableTypes.isEmpty {
-          filterTabs
-        }
-        historyList
-      }
-      .navigationTitle("History")
-      .background(Color.KinoPub.background)
+      historyList
+      .kinoScreen("History".localized)
       .task {
         await catalog.fetchItems()
       }
@@ -74,11 +68,16 @@ struct HistoryView: View {
       await catalog.refresh()
     }, navigationLinkProvider: { item in
       RouteLinkProvider().link(for: item)
-    })
+    }, statusOverlay: { AnyView(MediaCardStatusBadge(item: $0)) })
   }
 
   func groupedList(width: CGFloat) -> some View {
     ScrollView {
+      // Chips scroll with the content so the large title collapses.
+      if !catalog.availableTypes.isEmpty {
+        filterTabs
+          .padding(.bottom, 4)
+      }
       LazyVStack(spacing: 24, pinnedViews: [.sectionHeaders]) {
         ForEach(catalog.groupedSections) { section in
           Section {

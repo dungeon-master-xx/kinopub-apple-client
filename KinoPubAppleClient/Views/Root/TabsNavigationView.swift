@@ -11,6 +11,30 @@ import KinoPubUI
 import KinoPubBackend
 import KinoPubKit
 
+// MARK: - Embedded sections
+//
+// The custom "Ещё" tab is a real NavigationStack that PUSHES the chosen section (so swipe-back and a
+// single collapsing nav bar work natively). A pushed section must not wrap itself in its own
+// NavigationStack — `\.sectionEmbedded` tells it to render bare and rely on the More tab's stack.
+
+private struct SectionEmbeddedKey: EnvironmentKey {
+  static let defaultValue = false
+}
+
+extension EnvironmentValues {
+  /// True when a top-level screen is pushed inside the custom "Ещё" stack (render without an own stack).
+  var sectionEmbedded: Bool {
+    get { self[SectionEmbeddedKey.self] }
+    set { self[SectionEmbeddedKey.self] = newValue }
+  }
+}
+
+extension View {
+  /// Retained for call-site compatibility; the custom More now uses real push navigation, so the
+  /// system supplies the back button and this is a no-op.
+  func moreBackButton() -> some View { self }
+}
+
 struct TabsNavigationView: View {
 
   @Environment(\.appContext) var appContext
@@ -22,7 +46,6 @@ struct TabsNavigationView: View {
   @State private var selectedTab: NavigationTabs = .main
   /// Section the user was on before going offline, restored automatically on reconnect.
   @State private var sectionBeforeOffline: NavigationTabs?
-  /// Briefly shows the green "back online" banner after reconnecting.
   @State private var showReconnected = false
 
   var placement: ToolbarPlacement {
@@ -32,19 +55,15 @@ struct TabsNavigationView: View {
     .windowToolbar
 #endif
   }
-  
+
   var body: some View {
     TabView(selection: $selectedTab) {
+      // Поиск · Я смотрю · Главная (center) · История · Ещё
       searchTab
-      mainTab
-      sportTab
-      collectionsTab
-      bookmarksTab
-      newEpisodesTab
       watchingTab
+      mainTab
       historyTab
-      downloadsTab
-      profileTab
+      moreTab
     }
     .accentColor(Color.KinoPub.accent)
     .safeAreaInset(edge: .top, spacing: 0) {
@@ -86,14 +105,10 @@ struct TabsNavigationView: View {
 
   private func handleConnectivityChange(online: Bool) {
     if !online {
-      // Entering offline: remember where we were and jump to the always-available Downloads.
-      if selectedTab != .downloads && selectedTab != .profile {
-        sectionBeforeOffline = selectedTab
-      }
-      selectedTab = .downloads
+      // Downloads live inside "Ещё"; jump there (MoreView opens Downloads automatically offline).
+      if selectedTab != .more { sectionBeforeOffline = selectedTab }
+      selectedTab = .more
     } else {
-      // Reconnected: auto-restore the previous section — unless the user is mid-playback / deep in
-      // a downloaded item (don't interrupt). Show a brief "back online" confirmation either way.
       showReconnected = true
       if navigationState.downloadsRoutes.isEmpty, let previous = sectionBeforeOffline {
         selectedTab = previous
@@ -115,12 +130,14 @@ struct TabsNavigationView: View {
       OfflineUnavailableView(title: "Needs a connection".localized,
                              message: "This section isn't available offline.".localized,
                              actionTitle: "Go to Downloads".localized) {
-        selectedTab = .downloads
+        selectedTab = .more
       }
       .background(Color.KinoPub.background)
     }
   }
-  
+
+  // MARK: - Bottom-bar tabs
+
   var searchTab: some View {
     networkGated {
       SearchView(model: SearchModel(itemsService: appContext.contentService,
@@ -128,75 +145,7 @@ struct TabsNavigationView: View {
                                     errorHandler: errorHandler))
     }
     .tag(NavigationTabs.search)
-    .tabItem {
-      Label("Search", systemImage: "magnifyingglass")
-    }
-    .toolbarBackground(Color.KinoPub.background, for: placement)
-  }
-
-  var mainTab: some View {
-    networkGated {
-      HomeView(model: HomeModel(itemsService: appContext.contentService,
-                                authState: authState,
-                                errorHandler: errorHandler))
-    }
-    .tag(NavigationTabs.main)
-    .tabItem {
-      Label("Home", systemImage: "house")
-    }
-    .toolbarBackground(Color.KinoPub.background, for: placement)
-  }
-  
-  var sportTab: some View {
-    networkGated {
-      SportView(model: SportModel(itemsService: appContext.contentService,
-                                  authState: authState,
-                                  errorHandler: errorHandler))
-    }
-    .tag(NavigationTabs.sport)
-    .tabItem {
-      Label("Sport", systemImage: "sportscourt")
-    }
-    .toolbarBackground(Color.KinoPub.background, for: placement)
-  }
-
-  var collectionsTab: some View {
-    networkGated {
-      CollectionsView(model: CollectionsModel(collectionsService: appContext.collectionsService,
-                                              authState: authState,
-                                              errorHandler: errorHandler))
-    }
-    .tag(NavigationTabs.collections)
-    .tabItem {
-      Label("Collections", systemImage: "rectangle.stack")
-    }
-    .toolbarBackground(Color.KinoPub.background, for: placement)
-  }
-
-  var bookmarksTab: some View {
-    networkGated {
-      BookmarksView(catalog: BookmarksCatalog(itemsService: appContext.contentService,
-                                              authState: authState,
-                                              errorHandler: errorHandler))
-    }
-    .tag(NavigationTabs.bookmarks)
-    .tabItem {
-      Label("Bookmarks", systemImage: "bookmark")
-    }
-    .toolbarBackground(Color.KinoPub.background, for: placement)
-  }
-  
-  var newEpisodesTab: some View {
-    networkGated {
-      WatchingView(model: WatchingModel(itemsService: appContext.contentService,
-                                        authState: authState,
-                                        errorHandler: errorHandler,
-                                        tab: .newEpisodes))
-    }
-    .tag(NavigationTabs.newEpisodes)
-    .tabItem {
-      Label("New episodes", systemImage: "sparkles.tv")
-    }
+    .tabItem { Label("Search", systemImage: "magnifyingglass") }
     .toolbarBackground(Color.KinoPub.background, for: placement)
   }
 
@@ -208,9 +157,18 @@ struct TabsNavigationView: View {
                                         tab: .watchlist))
     }
     .tag(NavigationTabs.watching)
-    .tabItem {
-      Label("Watching", systemImage: "play.tv")
+    .tabItem { Label("Watching", systemImage: "play.tv") }
+    .toolbarBackground(Color.KinoPub.background, for: placement)
+  }
+
+  var mainTab: some View {
+    networkGated {
+      HomeView(model: HomeModel(itemsService: appContext.contentService,
+                                authState: authState,
+                                errorHandler: errorHandler))
     }
+    .tag(NavigationTabs.main)
+    .tabItem { Label("Home", systemImage: "house") }
     .toolbarBackground(Color.KinoPub.background, for: placement)
   }
 
@@ -221,30 +179,132 @@ struct TabsNavigationView: View {
                                         errorHandler: errorHandler))
     }
     .tag(NavigationTabs.history)
-    .tabItem {
-      Label("History", systemImage: "clock.arrow.circlepath")
-    }
+    .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
     .toolbarBackground(Color.KinoPub.background, for: placement)
   }
 
-  var downloadsTab: some View {
-    DownloadsView(catalog: DownloadsCatalog(downloadsDatabase: appContext.downloadedFilesDatabase, downloadManager: appContext.downloadManager))
-      .tag(NavigationTabs.downloads)
-      .tabItem {
-        Label("Downloads", systemImage: "arrow.down.circle")
-      }
+  var moreTab: some View {
+    MoreView()
+      .tag(NavigationTabs.more)
+      .tabItem { Label("More", systemImage: "ellipsis") }
       .toolbarBackground(Color.KinoPub.background, for: placement)
   }
-  
-  var profileTab: some View {
-    ProfileView(model: ProfileModel(userService: appContext.userService,
-                                    errorHandler: errorHandler,
-                                    authState: authState))
-      .tag(NavigationTabs.profile)
-      .tabItem {
-        Label("Profile", systemImage: "person.crop.circle")
+}
+
+// MARK: - Custom "Ещё" — mirrors the iPad sidebar, one navigation bar per screen
+
+struct MoreView: View {
+  @Environment(\.appContext) private var appContext
+  @EnvironmentObject private var navigationState: NavigationState
+  @EnvironmentObject private var errorHandler: ErrorHandler
+  @EnvironmentObject private var authState: AuthState
+  @EnvironmentObject private var networkMonitor: NetworkMonitor
+
+  /// Real navigation path (type-erased so it can hold both SidebarItem section pushes and Route
+  /// detail pushes from inside the embedded sections).
+  @State private var path = NavigationPath()
+
+  private var otherRows: [SidebarItem] { [.newEpisodes, .watching, .bookmarks, .downloads] }
+
+  var body: some View {
+    NavigationStack(path: $path) {
+      List {
+        Section("Library".localized) {
+          ForEach(SidebarItem.libraryCategories, id: \.self) { type in categoryRow(type) }
+          sectionRow(.sport)
+          sectionRow(.collections)
+        }
+        Section("Other".localized) {
+          ForEach(otherRows) { sectionRow($0) }
+        }
+        Section { sectionRow(.profile) }
       }
-      .toolbarBackground(Color.KinoPub.background, for: placement)
+#if os(iOS)
+      .listStyle(.insetGrouped)
+#endif
+      .scrollContentBackground(.hidden)
+      .kinoScreen("More".localized)
+      // Sections push as bare content onto this one stack (swipe-back + single bar). Details pushed
+      // from inside them are Route values handled by .routeDestinations().
+      .navigationDestination(for: SidebarItem.self) { item in
+        sectionView(item).environment(\.sectionEmbedded, true)
+      }
+      .routeDestinations()
+    }
+    // Offline: jump straight to Downloads (the only fully-available section).
+    .onChange(of: networkMonitor.isOnline) { online in
+      if !online { path = NavigationPath([SidebarItem.downloads]) }
+    }
+    .onAppear {
+      if !networkMonitor.isOnline, path.isEmpty { path.append(SidebarItem.downloads) }
+    }
+  }
+
+  /// A library category opens the shared bare filtered-catalog screen (no nested stack).
+  private func categoryRow(_ type: MediaType) -> some View {
+    let locked = !networkMonitor.isOnline
+    return NavigationLink(value: Route.filteredCatalog(MediaItemsFilter(contentType: type, genres: [], countries: [], year: nil, age: nil, sort: nil), type.title.localized)) {
+      rowLabel(type.title.localized, systemImage: type.systemImage, locked: locked)
+    }
+    .disabled(locked)
+    .listRowBackground(Color.KinoPub.background)
+  }
+
+  private func sectionRow(_ item: SidebarItem) -> some View {
+    let locked = !networkMonitor.isOnline && !item.isAvailableOffline
+    return NavigationLink(value: item) {
+      rowLabel(item.title.localized, systemImage: item.systemImage, locked: locked)
+    }
+    .disabled(locked)
+    .listRowBackground(Color.KinoPub.background)
+  }
+
+  private func rowLabel(_ title: String, systemImage: String, locked: Bool) -> some View {
+    HStack {
+      Label(title, systemImage: systemImage)
+      if locked {
+        Spacer()
+        Image(systemName: "lock.fill").font(.caption2)
+      }
+    }
+    .foregroundStyle(locked ? Color.KinoPub.subtitle : Color.KinoPub.text)
+  }
+
+  @ViewBuilder
+  private func sectionView(_ item: SidebarItem) -> some View {
+    switch item {
+    case .sport:
+      SportView(model: SportModel(itemsService: appContext.contentService,
+                                  authState: authState,
+                                  errorHandler: errorHandler))
+    case .collections:
+      CollectionsView(model: CollectionsModel(collectionsService: appContext.collectionsService,
+                                              authState: authState,
+                                              errorHandler: errorHandler))
+    case .newEpisodes:
+      WatchingView(model: WatchingModel(itemsService: appContext.contentService,
+                                        authState: authState,
+                                        errorHandler: errorHandler,
+                                        tab: .newEpisodes))
+    case .watching:
+      WatchingView(model: WatchingModel(itemsService: appContext.contentService,
+                                        authState: authState,
+                                        errorHandler: errorHandler,
+                                        tab: .watchlist))
+    case .bookmarks:
+      BookmarksView(catalog: BookmarksCatalog(itemsService: appContext.contentService,
+                                              authState: authState,
+                                              errorHandler: errorHandler))
+    case .downloads:
+      DownloadsView(catalog: DownloadsCatalog(downloadsDatabase: appContext.downloadedFilesDatabase,
+                                              downloadManager: appContext.downloadManager))
+    case .profile:
+      ProfileView(model: ProfileModel(userService: appContext.userService,
+                                      errorHandler: errorHandler,
+                                      authState: authState))
+    default:
+      EmptyView()
+    }
   }
 }
 

@@ -8,7 +8,7 @@
 import Foundation
 import KinoPubBackend
 
-enum NavigationTabs {
+enum NavigationTabs: Hashable {
   case search
   case main
   case sport
@@ -19,6 +19,10 @@ enum NavigationTabs {
   case history
   case downloads
   case profile
+  /// The custom iPhone "Ещё" tab (hosts everything the iPad sidebar has).
+  case more
+  /// A library category (Movies, Serials, …).
+  case category(MediaType)
 }
 
 /// Sidebar destinations for the iPad / macOS two-column layout.

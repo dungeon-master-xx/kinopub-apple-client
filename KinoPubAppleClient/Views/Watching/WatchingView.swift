@@ -19,29 +19,49 @@ struct WatchingView: View {
   // Local path: "New episodes" and "Watching" are two top-level screens — each owns its own
   // navigation stack so they never share one path binding (which would crash on switch).
   @State private var path: [Route] = []
+  @Environment(\.sectionEmbedded) private var sectionEmbedded
 
   init(model: @autoclosure @escaping () -> WatchingModel) {
     _model = StateObject(wrappedValue: model())
   }
 
   var body: some View {
-    NavigationStack(path: $path) {
-      VStack(spacing: 0) {
-        if model.tab == .newEpisodes {
-          episodesTypePicker
-        }
-        content
+    if sectionEmbedded {
+      sectionContent
+    } else {
+      NavigationStack(path: $path) {
+        sectionContent.routeDestinations()
       }
-      .navigationTitle((model.tab == .newEpisodes ? "New episodes" : "Watching").localized)
-      #if !os(macOS)
-      .navigationBarTitleDisplayMode(.large)
-      #endif
-      .background(Color.KinoPub.background)
-      .task {
-        await model.fetchItems()
+    }
+  }
+
+  private var sectionContent: some View {
+    // One scroll view with the chips as the first scrolling element, so the large title collapses
+    // on scroll like every other screen.
+    ScrollView {
+      if model.tab == .newEpisodes {
+        episodesTypePicker
+          .padding(.bottom, 4)
       }
-      .routeDestinations()
-      .handleError(state: $errorHandler.state)
+      gridBody
+    }
+    .refreshable { await model.refresh() }
+    .kinoScreen((model.tab == .newEpisodes ? "New episodes" : "Watching").localized)
+    .task {
+      await model.fetchItems()
+    }
+    .handleError(state: $errorHandler.state)
+  }
+
+  @ViewBuilder
+  private var gridBody: some View {
+    if model.isLoading {
+      skeletonGrid
+    } else if model.serials.isEmpty {
+      EmptyStateView(systemImage: "play.tv", title: "No series here yet".localized)
+        .frame(minHeight: 320)
+    } else {
+      serialsGrid
     }
   }
 
@@ -57,52 +77,33 @@ struct WatchingView: View {
                   ))
   }
 
-  @ViewBuilder
-  var content: some View {
-    if model.isLoading {
-      // Same poster-placeholder grid as the catalogs, so the loading skeleton is consistent.
-      skeletonGrid
-    } else if model.serials.isEmpty {
-      EmptyStateView(systemImage: "play.tv", title: "No series here yet".localized)
-    } else {
-      serialsGrid
-    }
-  }
-
   private var gridColumns: [GridItem] {
     [GridItem(.adaptive(minimum: 150), spacing: 16, alignment: .top)]
   }
 
   var serialsGrid: some View {
-    ScrollView {
-      LazyVGrid(columns: gridColumns, spacing: 24) {
-        ForEach(model.serials) { serial in
-          NavigationLink(value: Route.detailsByID(serial.id)) {
-            WatchingSerialView(serial: serial)
-          }
-          #if os(macOS)
-          .buttonStyle(PlainButtonStyle())
-          #endif
+    LazyVGrid(columns: gridColumns, spacing: 24) {
+      ForEach(model.serials) { serial in
+        NavigationLink(value: Route.detailsByID(serial.id)) {
+          WatchingSerialView(serial: serial)
         }
+        #if os(macOS)
+        .buttonStyle(PlainButtonStyle())
+        #endif
       }
-      .padding(.horizontal, 20)
-      .padding(.top, 8)
     }
-    .refreshable {
-      await model.refresh()
-    }
+    .padding(.horizontal, 20)
+    .padding(.top, 8)
   }
 
   private var skeletonGrid: some View {
-    ScrollView {
-      LazyVGrid(columns: gridColumns, spacing: 24) {
-        ForEach(0..<12, id: \.self) { _ in
-          PosterCard.placeholder(width: 150)
-        }
+    LazyVGrid(columns: gridColumns, spacing: 24) {
+      ForEach(0..<12, id: \.self) { _ in
+        PosterCard.placeholder(width: 150)
       }
-      .padding(.horizontal, 20)
-      .padding(.top, 8)
     }
+    .padding(.horizontal, 20)
+    .padding(.top, 8)
   }
 }
 

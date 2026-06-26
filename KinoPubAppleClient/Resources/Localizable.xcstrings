@@ -469,6 +469,22 @@
         }
       }
     },
+    "Back online": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back online"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Снова в сети"
+          }
+        }
+      }
+    },
     "Be the first to discuss this title": {
       "localizations": {
         "en": {
@@ -524,6 +540,7 @@
       }
     },
     "Browse": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -1393,6 +1410,22 @@
         }
       }
     },
+    "Find movies, shows, actors and directors.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find movies, shows, actors and directors."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фильмы, сериалы, актёры и режиссёры."
+          }
+        }
+      }
+    },
     "Finished": {
       "localizations": {
         "en": {
@@ -1556,6 +1589,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Немецкий"
+          }
+        }
+      }
+    },
+    "Go to Downloads": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go to Downloads"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перейти к загрузкам"
           }
         }
       }
@@ -2305,6 +2354,22 @@
         }
       }
     },
+    "Needs a connection": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needs a connection"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нужно подключение"
+          }
+        }
+      }
+    },
     "Neural": {
       "localizations": {
         "en": {
@@ -2843,6 +2908,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Год выхода"
+          }
+        }
+      }
+    },
+    "Removed from %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removed from %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалено из %@"
           }
         }
       }
@@ -3390,6 +3471,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Папка пуста"
+          }
+        }
+      }
+    },
+    "This section isn't available offline.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This section isn't available offline."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Этот раздел недоступен офлайн."
           }
         }
       }
@@ -4028,8 +4125,6 @@
         }
       }
     },
-    "ЕЩЕ": {},
-    "Свернуть": {},
     "You're offline — your downloads are available": {
       "localizations": {
         "en": {
@@ -4046,66 +4141,20 @@
         }
       }
     },
-    "Back online": {
+    "ЕЩЕ": {},
+    "Свернуть": {},
+    "More": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Back online"
+            "value": "More"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Снова в сети"
-          }
-        }
-      }
-    },
-    "Needs a connection": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Needs a connection"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Нужно подключение"
-          }
-        }
-      }
-    },
-    "This section isn't available offline.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This section isn't available offline."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Этот раздел недоступен офлайн."
-          }
-        }
-      }
-    },
-    "Go to Downloads": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Go to Downloads"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Перейти к загрузкам"
+            "value": "Ещё"
           }
         }
       }

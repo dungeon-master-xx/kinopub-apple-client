@@ -15,6 +15,7 @@ struct CollectionsView: View {
   @EnvironmentObject var errorHandler: ErrorHandler
   @Environment(\.appContext) var appContext
   @StateObject private var model: CollectionsModel
+  @Environment(\.sectionEmbedded) private var sectionEmbedded
 
   private let gridColumns = [GridItem(.adaptive(minimum: 200), spacing: 16, alignment: .top)]
 
@@ -23,25 +24,33 @@ struct CollectionsView: View {
   }
 
   var body: some View {
-    NavigationStack(path: $navigationState.collectionsRoutes) {
-      content
-        .navigationTitle("Collections")
-        .background(Color.KinoPub.background)
-        .task { await model.fetchCollections() }
-        .refreshable { await model.refresh() }
-        .routeDestinations()
-        .handleError(state: $errorHandler.state)
+    if sectionEmbedded {
+      sectionContent
+    } else {
+      NavigationStack(path: $navigationState.collectionsRoutes) {
+        sectionContent.routeDestinations()
+      }
     }
+  }
+
+  private var sectionContent: some View {
+    content
+      .kinoScreen("Collections".localized)
+      .task { await model.fetchCollections() }
+      .refreshable { await model.refresh() }
+      .handleError(state: $errorHandler.state)
   }
 
   @ViewBuilder
   private var content: some View {
-    VStack(spacing: 0) {
+    // Chips live inside the scroll view so the large title collapses on scroll.
+    ScrollView {
       sortTabs
+        .padding(.bottom, 4)
       if model.isLoading {
-        loading
+        loading.frame(minHeight: 320)
       } else if model.collections.isEmpty {
-        emptyState
+        emptyState.frame(minHeight: 320)
       } else {
         grid
       }
@@ -63,22 +72,20 @@ struct CollectionsView: View {
   }
 
   private var grid: some View {
-    ScrollView {
-      LazyVGrid(columns: gridColumns, spacing: 16) {
-        ForEach(model.collections) { collection in
-          NavigationLink(value: Route.collection(collection)) {
-            CollectionCard(collection: collection)
-              .onAppear {
-                model.loadMoreContent(after: collection)
-              }
-          }
-#if os(macOS)
-          .buttonStyle(.plain)
-#endif
+    LazyVGrid(columns: gridColumns, spacing: 16) {
+      ForEach(model.collections) { collection in
+        NavigationLink(value: Route.collection(collection)) {
+          CollectionCard(collection: collection)
+            .onAppear {
+              model.loadMoreContent(after: collection)
+            }
         }
+#if os(macOS)
+        .buttonStyle(.plain)
+#endif
       }
-      .padding(16)
     }
+    .padding(16)
   }
 
   // MARK: - States

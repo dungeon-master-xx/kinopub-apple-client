@@ -16,28 +16,34 @@ struct DownloadsView: View {
   @EnvironmentObject var errorHandler: ErrorHandler
   @Environment(\.appContext) var appContext
   @StateObject private var catalog: DownloadsCatalog
-  
+  @Environment(\.sectionEmbedded) private var sectionEmbedded
+
   init(catalog: @autoclosure @escaping () -> DownloadsCatalog) {
     _catalog = StateObject(wrappedValue: catalog())
   }
-  
+
   var body: some View {
-    NavigationStack(path: $navigationState.downloadsRoutes) {
-      ZStack {
-        if catalog.isEmpty {
-          emptyView
-        } else {
-          downloadsList
-        }
+    if sectionEmbedded {
+      sectionContent
+    } else {
+      NavigationStack(path: $navigationState.downloadsRoutes) {
+        sectionContent.routeDestinations()
       }
-      .navigationTitle("Downloads")
-      .background(Color.KinoPub.background)
-      .routeDestinations()
-      .onAppear(perform: {
-        catalog.refresh()
-      })
     }
-    
+  }
+
+  private var sectionContent: some View {
+    ZStack {
+      if catalog.isEmpty {
+        emptyView
+      } else {
+        downloadsList
+      }
+    }
+    .kinoScreen("Downloads".localized)
+    .onAppear(perform: {
+      catalog.refresh()
+    })
   }
   
   var downloadsList: some View {
