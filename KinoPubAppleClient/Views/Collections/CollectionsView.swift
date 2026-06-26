@@ -29,34 +29,7 @@ struct CollectionsView: View {
         .background(Color.KinoPub.background)
         .task { await model.fetchCollections() }
         .refreshable { await model.refresh() }
-        .navigationDestination(for: CollectionsRoutes.self) { route in
-          switch route {
-          case .collection(let collection):
-            CollectionDetailView(model: CollectionDetailModel(collection: collection,
-                                                              collectionsService: appContext.collectionsService,
-                                                              errorHandler: errorHandler))
-          case .details(let item):
-            MediaItemView(model: MediaItemModel(mediaItemId: item.id,
-                                                itemsService: appContext.contentService,
-                                                downloadManager: appContext.downloadManager,
-                                                linkProvider: CollectionsRoutesLinkProvider(),
-                                                errorHandler: errorHandler))
-          case .player(let item):
-            PlayerView(manager: PlayerManager(playItem: item,
-                                              watchMode: .media,
-                                              downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                              actionsService: appContext.actionsService))
-          case .trailerPlayer(let item):
-            PlayerView(manager: PlayerManager(playItem: item,
-                                              watchMode: .trailer,
-                                              downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                              actionsService: appContext.actionsService))
-          case .seasons(let seasons):
-            SeasonsView(model: SeasonsModel(seasons: seasons, linkProvider: CollectionsRoutesLinkProvider()))
-          case .season(let season):
-            SeasonView(model: SeasonModel(season: season, linkProvider: CollectionsRoutesLinkProvider()))
-          }
-        }
+        .routeDestinations()
         .handleError(state: $errorHandler.state)
     }
   }
@@ -78,40 +51,22 @@ struct CollectionsView: View {
   // MARK: - Sort tabs
 
   private var sortTabs: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 8) {
-        ForEach(CollectionsSort.allCases) { sort in
-          sortPill(title: sort.title, isSelected: model.selectedSort == sort) {
-            model.selectedSort = sort
-          }
-        }
-      }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 10)
-    }
-  }
-
-  private func sortPill(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-    Button(action: action) {
-      Text(title)
-        .font(.system(size: 14, weight: .semibold))
-        .foregroundStyle(isSelected ? Color.white : Color.KinoPub.text)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background {
-          Capsule(style: .continuous)
-            .fill(isSelected ? Color.KinoPub.accent : Color.KinoPub.selectionBackground)
-        }
-    }
-    .buttonStyle(.plain)
-    .animation(.easeInOut(duration: 0.15), value: isSelected)
+    FilterChipBar(items: CollectionsSort.allCases.map { FilterChipItem(id: $0.apiValue, title: $0.title) },
+                  selection: Binding(
+                    get: { model.selectedSort.apiValue },
+                    set: { value in
+                      if let sort = CollectionsSort.allCases.first(where: { $0.apiValue == value }) {
+                        model.selectedSort = sort
+                      }
+                    }
+                  ))
   }
 
   private var grid: some View {
     ScrollView {
       LazyVGrid(columns: gridColumns, spacing: 16) {
         ForEach(model.collections) { collection in
-          NavigationLink(value: CollectionsRoutes.collection(collection)) {
+          NavigationLink(value: Route.collection(collection)) {
             CollectionCard(collection: collection)
               .onAppear {
                 model.loadMoreContent(after: collection)
@@ -138,18 +93,7 @@ struct CollectionsView: View {
   }
 
   private var emptyState: some View {
-    VStack(spacing: 10) {
-      Spacer()
-      Image(systemName: "rectangle.stack")
-        .font(.system(size: 44))
-        .foregroundStyle(Color.KinoPub.subtitle)
-      Text("No collections yet")
-        .font(.system(size: 16, weight: .medium))
-        .foregroundStyle(Color.KinoPub.subtitle)
-        .multilineTextAlignment(.center)
-      Spacer()
-    }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    EmptyStateView(systemImage: "rectangle.stack", title: "No collections yet".localized)
   }
 }
 

@@ -25,7 +25,7 @@ struct HomeView: View {
   }
 
   var body: some View {
-    NavigationStack(path: $navigationState.mainRoutes) {
+    NavigationStack(path: $navigationState.homeRoutes) {
       ScrollView(.vertical) {
         LazyVStack(alignment: .leading, spacing: 28) {
           heroSection
@@ -52,45 +52,7 @@ struct HomeView: View {
       .task {
         await model.fetchData()
       }
-      .navigationDestination(for: MainRoutes.self) { route in
-        switch route {
-        case .details(let item):
-          MediaItemView(model: MediaItemModel(mediaItemId: item.id,
-                                              itemsService: appContext.contentService,
-                                              downloadManager: appContext.downloadManager,
-                                              linkProvider: MainRoutesLinkProvider(),
-                                              errorHandler: errorHandler))
-        case .player(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .media,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .trailerPlayer(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .trailer,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .seasons(let seasons):
-          SeasonsView(model: SeasonsModel(seasons: seasons, linkProvider: MainRoutesLinkProvider()))
-        case .season(let season):
-          SeasonView(model: SeasonModel(season: season, linkProvider: MainRoutesLinkProvider()))
-        case .filteredCatalog(let filter, let title):
-          FilteredCatalogView(catalog: MediaCatalog(itemsService: appContext.contentService,
-                                                    authState: authState,
-                                                    errorHandler: errorHandler,
-                                                    filter: filter),
-                              title: title,
-                              linkProvider: MainRoutesLinkProvider())
-        case .personSearch(let query, let field, let title):
-          PersonSearchView(model: SearchModel(itemsService: appContext.contentService,
-                                              authState: authState,
-                                              errorHandler: errorHandler),
-                           query: query,
-                           field: field,
-                           title: title,
-                           linkProvider: MainRoutesLinkProvider())
-        }
-      }
+      .routeDestinations()
       .handleError(state: $errorHandler.state)
     }
   }
@@ -135,7 +97,7 @@ struct HomeView: View {
 
   @ViewBuilder
   private func heroPage(_ hero: MediaItem) -> some View {
-    NavigationLink(value: MainRoutes.details(hero)) {
+    NavigationLink(value: Route.details(hero)) {
       HeroBackdrop(imageURL: hero.posters.wide ?? hero.posters.big, height: heroHeight) {
         VStack(alignment: .leading, spacing: 10) {
           Text(hero.localizedTitle)
@@ -174,7 +136,7 @@ struct HomeView: View {
   private var continueWatchingShelf: some View {
     MediaShelf(title: "Continue Watching".localized) {
       ForEach(model.continueWatching) { entry in
-        NavigationLink(value: MainRoutes.details(entry.item)) {
+        NavigationLink(value: Route.details(entry.item)) {
           ContinueWatchingCard(imageURL: entry.item.posters.wide ?? entry.item.posters.big,
                                title: entry.item.localizedTitle,
                                subtitle: entry.subtitle,
@@ -191,11 +153,12 @@ struct HomeView: View {
   private func shelfView(_ shelf: HomeModel.Shelf) -> some View {
     MediaShelf(title: shelf.title,
                onHeaderTap: shelf.filter.map { filter in
-                 { navigationState.mainRoutes.append(.filteredCatalog(filter, shelf.title)) }
+                 { navigationState.homeRoutes.append(.filteredCatalog(filter, shelf.title)) }
                }) {
       ForEach(shelf.items) { item in
-        NavigationLink(value: MainRoutes.details(item)) {
+        NavigationLink(value: Route.details(item)) {
           PosterCard(imageURL: item.posters.medium,
+                     title: item.localizedTitle,
                      imdbRating: item.imdbRating,
                      kinopoiskRating: item.kinopoiskRating)
         }

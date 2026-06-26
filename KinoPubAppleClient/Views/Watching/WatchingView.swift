@@ -16,18 +16,23 @@ struct WatchingView: View {
   @EnvironmentObject var errorHandler: ErrorHandler
   @Environment(\.appContext) var appContext
   @StateObject private var model: WatchingModel
+  // Local path: "New episodes" and "Watching" are two top-level screens — each owns its own
+  // navigation stack so they never share one path binding (which would crash on switch).
+  @State private var path: [Route] = []
 
   init(model: @autoclosure @escaping () -> WatchingModel) {
     _model = StateObject(wrappedValue: model())
   }
 
   var body: some View {
-    NavigationStack(path: $navigationState.watchingRoutes) {
+    NavigationStack(path: $path) {
       VStack(spacing: 0) {
-        filterPicker
+        if model.tab == .newEpisodes {
+          episodesTypePicker
+        }
         content
       }
-      .navigationTitle("Watching".localized)
+      .navigationTitle((model.tab == .newEpisodes ? "New episodes" : "Watching").localized)
       #if !os(macOS)
       .navigationBarTitleDisplayMode(.large)
       #endif
@@ -35,73 +40,44 @@ struct WatchingView: View {
       .task {
         await model.fetchItems()
       }
-      .navigationDestination(for: WatchingRoutes.self) { route in
-        switch route {
-        case .details(let id):
-          MediaItemView(model: MediaItemModel(mediaItemId: id,
-                                              itemsService: appContext.contentService,
-                                              downloadManager: appContext.downloadManager,
-                                              linkProvider: WatchingRoutesLinkProvider(),
-                                              errorHandler: errorHandler))
-        case .player(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .media,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .trailerPlayer(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .trailer,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .seasons(let seasons):
-          SeasonsView(model: SeasonsModel(seasons: seasons, linkProvider: WatchingRoutesLinkProvider()))
-        case .season(let season):
-          SeasonView(model: SeasonModel(season: season, linkProvider: WatchingRoutesLinkProvider()))
-        }
-      }
+      .routeDestinations()
       .handleError(state: $errorHandler.state)
     }
   }
 
-  var filterPicker: some View {
-    Picker("", selection: Binding(get: { model.filter },
-                                  set: { model.select(filter: $0) })) {
-      ForEach(WatchingFilter.allCases) { filter in
-        Text(filter.title.localized).tag(filter)
-      }
-    }
-    .pickerStyle(.segmented)
-    .labelsHidden()
-    .frame(maxWidth: 520)
-    .frame(maxWidth: .infinity, alignment: .center)
-    .padding(.horizontal, 16)
-    .padding(.top, 8)
-    .padding(.bottom, 12)
+  var episodesTypePicker: some View {
+    FilterChipBar(items: WatchingEpisodesType.allCases.map {
+                    FilterChipItem(id: $0.rawValue, title: $0.title.localized)
+                  },
+                  selection: Binding(
+                    get: { model.episodesType.rawValue },
+                    set: { if let type = WatchingEpisodesType(rawValue: $0) {
+                      model.select(episodesType: type)
+                    } }
+                  ))
   }
 
   @ViewBuilder
   var content: some View {
     if model.isLoading {
-      Spacer()
-      ProgressView()
-        .tint(Color.KinoPub.accent)
-      Spacer()
+      // Same poster-placeholder grid as the catalogs, so the loading skeleton is consistent.
+      skeletonGrid
     } else if model.serials.isEmpty {
-      Spacer()
-      Text("No series here yet")
-        .font(.system(size: 16.0, weight: .medium))
-        .foregroundStyle(Color.KinoPub.subtitle)
-      Spacer()
+      EmptyStateView(systemImage: "play.tv", title: "No series here yet".localized)
     } else {
       serialsGrid
     }
   }
 
+  private var gridColumns: [GridItem] {
+    [GridItem(.adaptive(minimum: 150), spacing: 16, alignment: .top)]
+  }
+
   var serialsGrid: some View {
     ScrollView {
-      LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 16, alignment: .top)], spacing: 24) {
+      LazyVGrid(columns: gridColumns, spacing: 24) {
         ForEach(model.serials) { serial in
-          NavigationLink(value: WatchingRoutes.details(serial.id)) {
+          NavigationLink(value: Route.detailsByID(serial.id)) {
             WatchingSerialView(serial: serial)
           }
           #if os(macOS)
@@ -114,6 +90,18 @@ struct WatchingView: View {
     }
     .refreshable {
       await model.refresh()
+    }
+  }
+
+  private var skeletonGrid: some View {
+    ScrollView {
+      LazyVGrid(columns: gridColumns, spacing: 24) {
+        ForEach(0..<12, id: \.self) { _ in
+          PosterCard.placeholder(width: 150)
+        }
+      }
+      .padding(.horizontal, 20)
+      .padding(.top, 8)
     }
   }
 }

@@ -19,6 +19,8 @@ struct SportView: View {
 #endif
   @StateObject private var model: SportModel
   @State private var selectedChannel: TVChannel?
+  // Shares the app-wide Route type so the detail column never mismatches path types on switch.
+  @State private var path: [Route] = []
 
   // Compact (iPhone) grid — small tiles, ~2× more per row than the old layout.
   private let gridColumns = [GridItem(.adaptive(minimum: 140), spacing: 14, alignment: .top)]
@@ -37,18 +39,13 @@ struct SportView: View {
   }
 
   var body: some View {
-    NavigationStack {
+    NavigationStack(path: $path) {
       content
         .navigationTitle("Sport")
         .background(Color.KinoPub.background)
         .task { await model.fetchChannels() }
         .refreshable { await model.refresh() }
-        .navigationDestination(for: TVChannel.self) { channel in
-          PlayerView(manager: PlayerManager(playItem: channel,
-                                            watchMode: .media,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        }
+        .routeDestinations()
         .handleError(state: $errorHandler.state)
     }
   }
@@ -56,7 +53,7 @@ struct SportView: View {
   @ViewBuilder
   private var content: some View {
     if model.isLoading {
-      loading
+      loadingPlaceholder
     } else if model.channels.isEmpty {
       emptyState
     } else if isWide {
@@ -66,13 +63,78 @@ struct SportView: View {
     }
   }
 
+  // MARK: - Loading placeholder (no fullscreen spinner)
+
+  /// While channels load, mirror the real layout with redacted tiles/rows, and keep the player
+  /// area as a locked black 16:9 frame instead of a fullscreen loader.
+  @ViewBuilder
+  private var loadingPlaceholder: some View {
+    if isWide {
+      HStack(spacing: 0) {
+        skeletonList
+          .frame(width: 320)
+        Divider()
+        lockedPlayerPlaceholder
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      }
+    } else {
+      ScrollView {
+        LazyVGrid(columns: gridColumns, spacing: 16) {
+          ForEach(0..<12, id: \.self) { _ in skeletonCard }
+        }
+        .padding(16)
+      }
+    }
+  }
+
+  private var skeletonCard: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      RoundedRectangle(cornerRadius: 10, style: .continuous)
+        .fill(Color.KinoPub.skeleton)
+        .aspectRatio(16.0 / 9.0, contentMode: .fit)
+      RoundedRectangle(cornerRadius: 4, style: .continuous)
+        .fill(Color.KinoPub.skeleton)
+        .frame(width: 90, height: 12)
+    }
+    .redacted(reason: .placeholder)
+  }
+
+  private var skeletonList: some View {
+    ScrollView {
+      VStack(spacing: 10) {
+        ForEach(0..<12, id: \.self) { _ in
+          HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+              .fill(Color.KinoPub.skeleton)
+              .frame(width: 60, height: 40)
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+              .fill(Color.KinoPub.skeleton)
+              .frame(height: 12)
+            Spacer(minLength: 0)
+          }
+          .padding(.horizontal, 12)
+        }
+      }
+      .padding(.vertical, 10)
+    }
+  }
+
+  private var lockedPlayerPlaceholder: some View {
+    Rectangle()
+      .fill(Color.black)
+      .aspectRatio(16.0 / 9.0, contentMode: .fit)
+      .frame(maxWidth: 900)
+      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .padding(16)
+  }
+
   // MARK: - Compact (iPhone): smaller grid, tap opens the modal player
 
   private var compactGrid: some View {
     ScrollView {
       LazyVGrid(columns: gridColumns, spacing: 16) {
         ForEach(model.channels) { channel in
-          NavigationLink(value: channel) {
+          NavigationLink(value: Route.player(channel)) {
             LiveChannelCard(channel: channel)
           }
         }
@@ -154,28 +216,8 @@ struct SportView: View {
 
   // MARK: - States
 
-  private var loading: some View {
-    VStack {
-      Spacer()
-      ProgressView().tint(Color.KinoPub.accent)
-      Spacer()
-    }
-    .frame(maxWidth: .infinity)
-  }
-
   private var emptyState: some View {
-    VStack(spacing: 10) {
-      Spacer()
-      Image(systemName: "sportscourt")
-        .font(.system(size: 44))
-        .foregroundStyle(Color.KinoPub.subtitle)
-      Text("No live broadcasts right now")
-        .font(.system(size: 16, weight: .medium))
-        .foregroundStyle(Color.KinoPub.subtitle)
-        .multilineTextAlignment(.center)
-      Spacer()
-    }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    EmptyStateView(systemImage: "sportscourt", title: "No live broadcasts right now".localized)
   }
 }
 

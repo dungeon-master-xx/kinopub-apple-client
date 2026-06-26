@@ -6,7 +6,9 @@
 //
 
 import Foundation
+import SwiftUI
 import KinoPubBackend
+import KinoPubUI
 
 protocol NavigationLinkProvider {
   func link(for item: MediaItem) -> any Hashable
@@ -20,177 +22,144 @@ protocol NavigationLinkProvider {
   func personSearch(query: String, field: String, title: String) -> (any Hashable)?
 }
 
-extension NavigationLinkProvider {
-  func filteredCatalog(filter: MediaItemsFilter, title: String) -> (any Hashable)? { nil }
-  func personSearch(query: String, field: String, title: String) -> (any Hashable)? { nil }
-}
-
-struct SearchRoutesLinkProvider: NavigationLinkProvider {
-  func link(for item: MediaItem) -> any Hashable {
-    SearchRoutes.details(item)
-  }
-
-  func player(for item: any PlayableItem) -> any Hashable {
-    SearchRoutes.player(item)
-  }
-
-  func trailerPlayer(for item: any PlayableItem) -> any Hashable {
-    SearchRoutes.trailerPlayer(item)
-  }
-
-  func seasons(for seasons: [Season]) -> any Hashable {
-    SearchRoutes.seasons(seasons)
-  }
-
-  func season(for season: Season) -> any Hashable {
-    SearchRoutes.season(season)
-  }
-
+/// The one and only link provider: every section now navigates with the shared `Route` type.
+struct RouteLinkProvider: NavigationLinkProvider {
+  func link(for item: MediaItem) -> any Hashable { Route.details(item) }
+  func player(for item: any PlayableItem) -> any Hashable { Route.player(item) }
+  func trailerPlayer(for item: any PlayableItem) -> any Hashable { Route.trailerPlayer(item) }
+  func seasons(for seasons: [Season]) -> any Hashable { Route.seasons(seasons) }
+  func season(for season: Season) -> any Hashable { Route.season(season) }
   func filteredCatalog(filter: MediaItemsFilter, title: String) -> (any Hashable)? {
-    SearchRoutes.filteredCatalog(filter, title)
+    Route.filteredCatalog(filter, title)
   }
-
   func personSearch(query: String, field: String, title: String) -> (any Hashable)? {
-    SearchRoutes.personSearch(query, field, title)
+    Route.personSearch(query, field, title)
   }
 }
 
-struct MainRoutesLinkProvider: NavigationLinkProvider {
-  func link(for item: MediaItem) -> any Hashable {
-    MainRoutes.details(item)
-  }
-  
-  func player(for item: any PlayableItem) -> any Hashable {
-    MainRoutes.player(item)
-  }
-  
-  func trailerPlayer(for item: any PlayableItem) -> any Hashable {
-    MainRoutes.trailerPlayer(item)
-  }
-  
-  func seasons(for seasons: [Season]) -> any Hashable {
-    MainRoutes.seasons(seasons)
-  }
-  
-  func season(for season: Season) -> any Hashable {
-    MainRoutes.season(season)
-  }
+// MARK: - Shared destination resolver
 
-  func filteredCatalog(filter: MediaItemsFilter, title: String) -> (any Hashable)? {
-    MainRoutes.filteredCatalog(filter, title)
-  }
-
-  func personSearch(query: String, field: String, title: String) -> (any Hashable)? {
-    MainRoutes.personSearch(query, field, title)
+extension View {
+  /// Registers the shared `Route` destinations on a `NavigationStack`. Every section uses this,
+  /// so all detail stacks share one path element type (see `Route`).
+  func routeDestinations() -> some View {
+    navigationDestination(for: Route.self) { route in
+      RouteDestinationView(route: route)
+    }
   }
 }
 
-struct BookmarksRoutesLinkProvider: NavigationLinkProvider {
-  func link(for item: MediaItem) -> any Hashable {
-    BookmarksRoutes.details(item)
+/// Builds the destination view for any `Route`. Each destination constructs its own models from
+/// the app context, so this is section-agnostic and can be reused everywhere.
+struct RouteDestinationView: View {
+  let route: Route
+
+  @Environment(\.appContext) private var appContext
+  @EnvironmentObject private var authState: AuthState
+  @EnvironmentObject private var errorHandler: ErrorHandler
+
+  var body: some View {
+    switch route {
+    case .details(let item):
+      mediaItem(id: item.id)
+    case .detailsByID(let id):
+      mediaItem(id: id)
+    case .seasons(let seasons):
+      SeasonsView(model: SeasonsModel(seasons: seasons, linkProvider: RouteLinkProvider()))
+    case .season(let season):
+      SeasonView(model: SeasonModel(season: season, linkProvider: RouteLinkProvider()))
+    case .player(let item):
+      player(item, mode: .media)
+    case .trailerPlayer(let item):
+      player(item, mode: .trailer)
+    case .filteredCatalog(let filter, let title):
+      FilteredCatalogView(catalog: MediaCatalog(itemsService: appContext.contentService,
+                                                authState: authState,
+                                                errorHandler: errorHandler,
+                                                filter: filter),
+                          title: title,
+                          linkProvider: RouteLinkProvider())
+    case .personSearch(let query, let field, let title):
+      PersonSearchView(model: SearchModel(itemsService: appContext.contentService,
+                                          authState: authState,
+                                          errorHandler: errorHandler),
+                       query: query,
+                       field: field,
+                       title: title,
+                       linkProvider: RouteLinkProvider())
+    case .genre(let id, let title):
+      GenreResultsView(model: SearchModel(itemsService: appContext.contentService,
+                                          authState: authState,
+                                          errorHandler: errorHandler),
+                       genreId: id,
+                       title: title)
+    case .bookmark(let bookmark):
+      BookmarkView(model: BookmarkModel(bookmark: bookmark,
+                                        itemsService: appContext.contentService,
+                                        actionsService: appContext.actionsService,
+                                        errorHandler: errorHandler))
+    case .collection(let collection):
+      CollectionDetailView(model: CollectionDetailModel(collection: collection,
+                                                        collectionsService: appContext.collectionsService,
+                                                        errorHandler: errorHandler))
+    }
   }
-  
-  func player(for item: any PlayableItem) -> any Hashable {
-    BookmarksRoutes.player(item)
+
+  @ViewBuilder
+  private func mediaItem(id: Int) -> some View {
+    MediaItemView(model: MediaItemModel(mediaItemId: id,
+                                        itemsService: appContext.contentService,
+                                        downloadManager: appContext.downloadManager,
+                                        linkProvider: RouteLinkProvider(),
+                                        errorHandler: errorHandler))
   }
-  
-  func trailerPlayer(for item: any PlayableItem) -> any Hashable {
-    BookmarksRoutes.trailerPlayer(item)
-  }
-  
-  func seasons(for seasons: [Season]) -> any Hashable {
-    BookmarksRoutes.seasons(seasons)
-  }
-  
-  func season(for season: Season) -> any Hashable {
-    BookmarksRoutes.season(season)
+
+  @ViewBuilder
+  private func player(_ item: any PlayableItem, mode: WatchMode) -> some View {
+    PlayerView(manager: PlayerManager(playItem: item,
+                                      watchMode: mode,
+                                      downloadedFilesDatabase: appContext.downloadedFilesDatabase,
+                                      actionsService: appContext.actionsService))
   }
 }
 
-struct HistoryRoutesLinkProvider: NavigationLinkProvider {
-  func link(for item: MediaItem) -> any Hashable {
-    HistoryRoutes.details(item)
+/// Self-contained genre browse grid (owns its own `SearchModel`) so it can be created from the
+/// shared route resolver without depending on any screen's view model.
+struct GenreResultsView: View {
+  @StateObject private var model: SearchModel
+  private let genreId: Int
+  private let title: String
+
+  private let columns = [GridItem(.adaptive(minimum: 130), spacing: 16)]
+
+  init(model: @autoclosure @escaping () -> SearchModel, genreId: Int, title: String) {
+    _model = StateObject(wrappedValue: model())
+    self.genreId = genreId
+    self.title = title
   }
 
-  func player(for item: any PlayableItem) -> any Hashable {
-    HistoryRoutes.player(item)
-  }
-
-  func trailerPlayer(for item: any PlayableItem) -> any Hashable {
-    HistoryRoutes.trailerPlayer(item)
-  }
-
-  func seasons(for seasons: [Season]) -> any Hashable {
-    HistoryRoutes.seasons(seasons)
-  }
-
-  func season(for season: Season) -> any Hashable {
-    HistoryRoutes.season(season)
-  }
-}
-
-struct WatchingRoutesLinkProvider: NavigationLinkProvider {
-  func link(for item: MediaItem) -> any Hashable {
-    WatchingRoutes.details(item.id)
-  }
-
-  func player(for item: any PlayableItem) -> any Hashable {
-    WatchingRoutes.player(item)
-  }
-
-  func trailerPlayer(for item: any PlayableItem) -> any Hashable {
-    WatchingRoutes.trailerPlayer(item)
-  }
-
-  func seasons(for seasons: [Season]) -> any Hashable {
-    WatchingRoutes.seasons(seasons)
-  }
-
-  func season(for season: Season) -> any Hashable {
-    WatchingRoutes.season(season)
-  }
-}
-
-struct CollectionsRoutesLinkProvider: NavigationLinkProvider {
-  func link(for item: MediaItem) -> any Hashable {
-    CollectionsRoutes.details(item)
-  }
-
-  func player(for item: any PlayableItem) -> any Hashable {
-    CollectionsRoutes.player(item)
-  }
-
-  func trailerPlayer(for item: any PlayableItem) -> any Hashable {
-    CollectionsRoutes.trailerPlayer(item)
-  }
-
-  func seasons(for seasons: [Season]) -> any Hashable {
-    CollectionsRoutes.seasons(seasons)
-  }
-
-  func season(for season: Season) -> any Hashable {
-    CollectionsRoutes.season(season)
-  }
-}
-
-struct DownloadsRoutesLinkProvider: NavigationLinkProvider {
-  func link(for item: MediaItem) -> any Hashable {
-    BookmarksRoutes.details(item)
-  }
-  
-  func player(for item: any PlayableItem) -> any Hashable {
-    DownloadsRoutes.player(item)
-  }
-  
-  func trailerPlayer(for item: any PlayableItem) -> any Hashable {
-    DownloadsRoutes.trailerPlayer(item)
-  }
-  
-  func seasons(for seasons: [Season]) -> any Hashable {
-    ""
-  }
-  
-  func season(for season: Season) -> any Hashable {
-    ""
+  var body: some View {
+    ScrollView {
+      LazyVGrid(columns: columns, spacing: 16) {
+        ForEach(model.genreResults, id: \.id) { item in
+          if item.skeleton ?? false {
+            PosterCard.placeholder()
+          } else {
+            NavigationLink(value: Route.details(item)) {
+              PosterCard(imageURL: item.posters.medium, title: item.localizedTitle)
+            }
+#if os(macOS)
+            .buttonStyle(.plain)
+#endif
+          }
+        }
+      }
+      .padding(16)
+    }
+    .background(Color.KinoPub.background)
+    .navigationTitle(title)
+    .task {
+      await model.loadGenreResults(genreId: genreId)
+    }
   }
 }

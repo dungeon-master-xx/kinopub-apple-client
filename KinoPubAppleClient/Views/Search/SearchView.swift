@@ -31,6 +31,11 @@ struct SearchView: View {
       ScrollView {
         if model.query.trimmingCharacters(in: .whitespaces).isEmpty {
           discoveryContent
+        } else if model.results.isEmpty && !model.searching {
+          EmptyStateView(systemImage: "magnifyingglass",
+                         title: "Nothing found".localized,
+                         message: "Try a different title, actor or director.".localized)
+            .padding(.top, 80)
         } else {
           resultsContent
         }
@@ -45,47 +50,7 @@ struct SearchView: View {
       .onChange(of: model.query) { _ in
         selectedResultType = nil
       }
-      .navigationDestination(for: SearchRoutes.self) { route in
-        switch route {
-        case .details(let item):
-          MediaItemView(model: MediaItemModel(mediaItemId: item.id,
-                                              itemsService: appContext.contentService,
-                                              downloadManager: appContext.downloadManager,
-                                              linkProvider: SearchRoutesLinkProvider(),
-                                              errorHandler: errorHandler))
-        case .player(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .media,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .trailerPlayer(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .trailer,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .seasons(let seasons):
-          SeasonsView(model: SeasonsModel(seasons: seasons, linkProvider: SearchRoutesLinkProvider()))
-        case .season(let season):
-          SeasonView(model: SeasonModel(season: season, linkProvider: SearchRoutesLinkProvider()))
-        case .genre(let id, let title):
-          genreResults(id: id, title: title)
-        case .filteredCatalog(let filter, let title):
-          FilteredCatalogView(catalog: MediaCatalog(itemsService: appContext.contentService,
-                                                    authState: authState,
-                                                    errorHandler: errorHandler,
-                                                    filter: filter),
-                              title: title,
-                              linkProvider: SearchRoutesLinkProvider())
-        case .personSearch(let query, let field, let title):
-          PersonSearchView(model: SearchModel(itemsService: appContext.contentService,
-                                              authState: authState,
-                                              errorHandler: errorHandler),
-                           query: query,
-                           field: field,
-                           title: title,
-                           linkProvider: SearchRoutesLinkProvider())
-        }
-      }
+      .routeDestinations()
       .handleError(state: $errorHandler.state)
     }
   }
@@ -118,7 +83,7 @@ struct SearchView: View {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 12) {
           ForEach(model.recentItems) { recent in
-            NavigationLink(value: SearchRoutes.details(MediaItem.mock(id: recent.id))) {
+            NavigationLink(value: Route.details(MediaItem.mock(id: recent.id))) {
               recentCard(recent)
             }
             .buttonStyle(.plain)
@@ -165,7 +130,7 @@ struct SearchView: View {
       LazyVGrid(columns: browseColumns, spacing: 16) {
         if model.genres.isEmpty {
           ForEach(MediaType.allCases) { type in
-            NavigationLink(value: SearchRoutes.genre(0, type.title)) {
+            NavigationLink(value: Route.genre(0, type.title)) {
               BrowseCategoryCard(title: type.title)
             }
 #if os(macOS)
@@ -174,7 +139,7 @@ struct SearchView: View {
           }
         } else {
           ForEach(model.genres, id: \.id) { genre in
-            NavigationLink(value: SearchRoutes.genre(genre.id, genre.title)) {
+            NavigationLink(value: Route.genre(genre.id, genre.title)) {
               BrowseCategoryCard(title: genre.title, imageURL: model.genrePosters[genre.id])
             }
 #if os(macOS)
@@ -196,7 +161,7 @@ struct SearchView: View {
           if item.skeleton ?? false {
             PosterCard.placeholder()
           } else {
-            NavigationLink(value: SearchRoutes.details(item)) {
+            NavigationLink(value: Route.details(item)) {
               PosterCard(imageURL: item.posters.medium, title: item.localizedTitle)
             }
 #if os(macOS)
@@ -271,32 +236,6 @@ struct SearchView: View {
     .buttonStyle(.plain)
   }
 
-  // MARK: - Genre results destination
-
-  func genreResults(id: Int, title: String) -> some View {
-    ScrollView {
-      LazyVGrid(columns: resultsColumns, spacing: 16) {
-        ForEach(model.genreResults, id: \.id) { item in
-          if item.skeleton ?? false {
-            PosterCard.placeholder()
-          } else {
-            NavigationLink(value: SearchRoutes.details(item)) {
-              PosterCard(imageURL: item.posters.medium, title: item.localizedTitle)
-            }
-#if os(macOS)
-            .buttonStyle(.plain)
-#endif
-          }
-        }
-      }
-      .padding(16)
-    }
-    .background(Color.KinoPub.background)
-    .navigationTitle(title)
-    .task {
-      await model.loadGenreResults(genreId: id)
-    }
-  }
 }
 
 struct SearchView_Previews: PreviewProvider {

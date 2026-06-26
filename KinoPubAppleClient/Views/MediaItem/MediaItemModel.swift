@@ -24,6 +24,8 @@ class MediaItemModel: ObservableObject {
   @Published public var mediaItem: MediaItem = MediaItem.mock()
   @Published public var itemLoaded: Bool = false
   @Published public var bookmarkFolders: [Bookmark] = []
+  /// Transient confirmation message shown as a toast (e.g. after toggling a bookmark).
+  @Published public var toastMessage: String?
   @Published public var relatedItems: [MediaItem] = []
   /// Resolved cast/crew portrait URLs (by name) from TMDB.
   @Published public var personImages: [String: URL] = [:]
@@ -233,10 +235,11 @@ class MediaItemModel: ObservableObject {
     }
   }
 
-  func toggleBookmark(folderId: Int) {
+  func toggleBookmark(folderId: Int, folderTitle: String) {
     Task {
       do {
         try await actionsService.toggleBookmark(itemId: mediaItemId, folderId: folderId)
+        toastMessage = String(format: "Saved to %@".localized, folderTitle)
       } catch {
         errorHandler.setError(error)
       }

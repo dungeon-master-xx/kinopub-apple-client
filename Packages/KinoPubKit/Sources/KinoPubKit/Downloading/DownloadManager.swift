@@ -69,8 +69,20 @@ public class DownloadManager<Meta: Codable & Equatable>: NSObject, URLSessionDow
   }
 
   public func completeDownload(_ url: URL) {
-    activeDownloads[url] = nil
+    // Delegate callbacks arrive on a background queue; `activeDownloads` is @Published and drives
+    // the UI, so its mutations must land on the main thread.
+    onMain { self.activeDownloads[url] = nil }
     controlDatabase?.remove(url: url)
+  }
+
+  /// Runs `work` synchronously if already on the main thread (keeps unit-test assertions simple),
+  /// otherwise hops to the main queue.
+  private func onMain(_ work: @escaping () -> Void) {
+    if Thread.isMainThread {
+      work()
+    } else {
+      DispatchQueue.main.async(execute: work)
+    }
   }
 
   /// Rebuilds `activeDownloads` from persisted control info as paused `Download` objects so the user

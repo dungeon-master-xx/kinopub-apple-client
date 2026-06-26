@@ -17,6 +17,9 @@ struct MainView: View {
   @StateObject private var catalog: MediaCatalog
   @State private var showShortCutPicker: Bool = false
   @State private var showFilterPicker: Bool = false
+  // Local path: each category catalog owns its navigation so two stacks never share a binding
+  // (sharing navigationState.mainRoutes with Home crashed when switching sidebar sections).
+  @State private var path: [Route] = []
   
   init(catalog: @autoclosure @escaping () -> MediaCatalog) {
     _catalog = StateObject(wrappedValue: catalog())
@@ -31,7 +34,7 @@ struct MainView: View {
   }
   
   var body: some View {
-    NavigationStack(path: $navigationState.mainRoutes) {
+    NavigationStack(path: $path) {
       VStack {
         if catalog.items.isEmpty && !catalog.query.isEmpty {
           emptyView
@@ -72,48 +75,10 @@ struct MainView: View {
                      catalog.clearFilter()
                    })
       })
-      .navigationDestination(for: MainRoutes.self) { route in
-        switch route {
-        case .details(let item):
-          MediaItemView(model: MediaItemModel(mediaItemId: item.id,
-                                              itemsService: appContext.contentService,
-                                              downloadManager: appContext.downloadManager,
-                                              linkProvider: MainRoutesLinkProvider(),
-                                              errorHandler: errorHandler))
-        case .player(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .media,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .trailerPlayer(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .trailer,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .seasons(let seasons):
-          SeasonsView(model: SeasonsModel(seasons: seasons, linkProvider: MainRoutesLinkProvider()))
-        case .season(let season):
-          SeasonView(model: SeasonModel(season: season, linkProvider: MainRoutesLinkProvider()))
-        case .filteredCatalog(let filter, let title):
-          FilteredCatalogView(catalog: MediaCatalog(itemsService: appContext.contentService,
-                                                    authState: authState,
-                                                    errorHandler: errorHandler,
-                                                    filter: filter),
-                              title: title,
-                              linkProvider: MainRoutesLinkProvider())
-        case .personSearch(let query, let field, let title):
-          PersonSearchView(model: SearchModel(itemsService: appContext.contentService,
-                                              authState: authState,
-                                              errorHandler: errorHandler),
-                           query: query,
-                           field: field,
-                           title: title,
-                           linkProvider: MainRoutesLinkProvider())
-        }
-      }
+      .routeDestinations()
       .handleError(state: $errorHandler.state)
       .task {
-        await catalog.fetchItems()
+        await catalog.initialFetch()
       }
       // The deep-link filter is already captured by the catalog above; clear it so a later
       // manual selection of this section isn't unexpectedly pre-filtered.
@@ -130,7 +95,7 @@ struct MainView: View {
       }, onRefresh: {
         await catalog.refresh()
       }, navigationLinkProvider: { item in
-        MainRoutesLinkProvider().link(for: item)
+        RouteLinkProvider().link(for: item)
       })
     }
   }
@@ -222,7 +187,7 @@ struct FilteredCatalogView: View {
                  })
     }
     .task {
-      await catalog.fetchItems()
+      await catalog.initialFetch()
     }
     .handleError(state: $errorHandler.state)
   }

@@ -18,6 +18,10 @@ struct SidebarView: View {
   @EnvironmentObject var authState: AuthState
 
   var body: some View {
+    // Every section's detail NavigationStack now uses the shared `Route` element type, so the
+    // NavigationSplitView detail column reconciles cleanly across section switches (no
+    // AnyNavigationPath.comparisonTypeMismatch). That means no per-selection `.id` hack — the
+    // sidebar keeps its identity, scroll position, and selection animation.
     NavigationSplitView(columnVisibility: $navigationState.columnVisibility) {
       Sidebar(selection: $navigationState.sidebarSelection)
     } detail: {

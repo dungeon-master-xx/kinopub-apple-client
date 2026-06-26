@@ -14,6 +14,8 @@ protocol UserActionsService {
   func toggleWatchlist(id: Int) async throws
   func toggleBookmark(itemId: Int, folderId: Int) async throws
   func fetchBookmarks() async throws -> [Bookmark]
+  func renameBookmarkFolder(id: Int, title: String) async throws
+  func removeBookmarkFolder(id: Int) async throws
   func fetchWatchMark(id: Int, video: Int?, season: Int?) async throws -> WatchData
 }
 
@@ -40,6 +42,14 @@ struct UserActionsServiceMock: UserActionsService {
 
   func fetchBookmarks() async throws -> [Bookmark] {
     []
+  }
+
+  func renameBookmarkFolder(id: Int, title: String) async throws {
+
+  }
+
+  func removeBookmarkFolder(id: Int) async throws {
+
   }
 
   func fetchWatchMark(id: Int, video: Int?, season: Int?) async throws -> WatchData {

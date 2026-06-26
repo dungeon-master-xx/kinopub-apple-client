@@ -78,7 +78,7 @@ struct MediaItemHeaderView_Previews: PreviewProvider {
   static var previews: some View {
     MediaItemHeaderView(size: .standard,
                         mediaItem: MediaItem.mock(),
-                        linkProvider: MainRoutesLinkProvider(),
+                        linkProvider: RouteLinkProvider(),
                         isSkeleton: true)
   }
 }

@@ -112,7 +112,7 @@ struct CollectionDetailView: View {
                              await model.refresh()
                            },
                            navigationLinkProvider: { item in
-                             CollectionsRoutesLinkProvider().link(for: item)
+                             RouteLinkProvider().link(for: item)
                            })
     }
   }

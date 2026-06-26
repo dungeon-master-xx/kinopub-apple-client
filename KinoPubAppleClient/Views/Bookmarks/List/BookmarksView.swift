@@ -29,34 +29,7 @@ struct BookmarksView: View {
       .task {
         await catalog.fetchItems()
       }
-      .navigationDestination(for: BookmarksRoutes.self) { route in
-        switch route {
-        case .details(let item):
-          MediaItemView(model: MediaItemModel(mediaItemId: item.id,
-                                              itemsService: appContext.contentService,
-                                              downloadManager: appContext.downloadManager,
-                                              linkProvider: BookmarksRoutesLinkProvider(),
-                                              errorHandler: errorHandler))
-        case .bookmark(let bookmark):
-          BookmarkView(model: BookmarkModel(bookmark: bookmark,
-                                            itemsService: appContext.contentService,
-                                            errorHandler: errorHandler))
-        case .player(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .media,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .trailerPlayer(let item):
-          PlayerView(manager: PlayerManager(playItem: item,
-                                            watchMode: .trailer,
-                                            downloadedFilesDatabase: appContext.downloadedFilesDatabase,
-                                            actionsService: appContext.actionsService))
-        case .seasons(let seasons):
-          SeasonsView(model: SeasonsModel(seasons: seasons, linkProvider: BookmarksRoutesLinkProvider()))
-        case .season(let season):
-          SeasonView(model: SeasonModel(season: season, linkProvider: BookmarksRoutesLinkProvider()))
-        }
-      }
+      .routeDestinations()
       .handleError(state: $errorHandler.state)
     }
     
@@ -68,12 +41,13 @@ struct BookmarksView: View {
         ForEach(catalog.items) { bookmark in
           MediaShelf(title: bookmark.title,
                      onHeaderTap: {
-                       navigationState.bookmarksRoutes.append(BookmarksRoutes.bookmark(bookmark))
+                       navigationState.bookmarksRoutes.append(Route.bookmark(bookmark))
                      }) {
             if let items = catalog.folderItems[bookmark.id] {
               ForEach(items) { item in
-                NavigationLink(value: BookmarksRoutes.details(item)) {
+                NavigationLink(value: Route.details(item)) {
                   PosterCard(imageURL: item.posters.medium,
+                             title: item.localizedTitle,
                              imdbRating: item.imdbRating,
                              kinopoiskRating: item.kinopoiskRating)
                 }

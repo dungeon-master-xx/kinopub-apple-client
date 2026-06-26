@@ -67,6 +67,9 @@ class HomeModel: ObservableObject {
   @Published public var continueWatching: [ContinueItem] = []
   /// True until the Continue Watching row has resolved, so the UI can reserve its space.
   @Published public var continueWatchingLoading: Bool = true
+  /// Whether the real shelves have been fetched. `shelves` starts as skeleton placeholders (so
+  /// it's never empty), so we can't gate the one-time load on `shelves.isEmpty`.
+  private var didLoadShelves = false
 
   init(itemsService: VideoContentService, authState: AuthState, errorHandler: ErrorHandler) {
     self.itemsService = itemsService
@@ -86,35 +89,44 @@ class HomeModel: ObservableObject {
 
     // Build the shelves from the kino.pub web sections (each with its own order/period),
     // fetched in parallel. A failed shelf is simply dropped rather than failing the screen.
-    let specs = HomeModel.shelfSpecs
-    let shelfService = itemsService
-    let loaded: [Shelf] = await withTaskGroup(of: (Int, Shelf?).self) { group in
-      for (index, spec) in specs.enumerated() {
-        group.addTask {
-          let items = (try? await shelfService.filter(filter: spec.filter, page: nil))?.items ?? []
-          let shelf = items.isEmpty ? nil
-            : Shelf(title: spec.title, items: items, ranked: false, filter: spec.filter)
-          return (index, shelf)
+    // Only build them once: returning from a pushed detail must not rebuild the list (which
+    // would reset the scroll position). Pull-to-refresh goes through `refresh()` instead.
+    if !didLoadShelves {
+      let specs = HomeModel.shelfSpecs
+      let shelfService = itemsService
+      let loaded: [Shelf] = await withTaskGroup(of: (Int, Shelf?).self) { group in
+        for (index, spec) in specs.enumerated() {
+          group.addTask {
+            let items = (try? await shelfService.filter(filter: spec.filter, page: nil))?.items ?? []
+            let shelf = items.isEmpty ? nil
+              : Shelf(title: spec.title, items: items, ranked: false, filter: spec.filter)
+            return (index, shelf)
+          }
         }
+        var slots = [Shelf?](repeating: nil, count: specs.count)
+        for await (index, shelf) in group { slots[index] = shelf }
+        return slots.compactMap { $0 }
       }
-      var slots = [Shelf?](repeating: nil, count: specs.count)
-      for await (index, shelf) in group { slots[index] = shelf }
-      return slots.compactMap { $0 }
-    }
 
-    shelves = loaded
+      // Only commit (and stop reloading) once something actually came back, so a transient
+      // failure keeps the skeletons and retries on the next appearance instead of sticking empty.
+      if !loaded.isEmpty {
+        didLoadShelves = true
+        shelves = loaded
 
-    // Build the hero gallery from the lead item of each shelf (deduplicated), so the
-    // top of Home is a swipeable carousel of varied features rather than a single title.
-    var heroSeen = Set<Int>()
-    var featuredItems: [MediaItem] = []
-    for shelf in loaded {
-      if let first = shelf.items.first, !heroSeen.contains(first.id) {
-        heroSeen.insert(first.id)
-        featuredItems.append(first)
+        // Build the hero gallery from the lead item of each shelf (deduplicated), so the
+        // top of Home is a swipeable carousel of varied features rather than a single title.
+        var heroSeen = Set<Int>()
+        var featuredItems: [MediaItem] = []
+        for shelf in loaded {
+          if let first = shelf.items.first, !heroSeen.contains(first.id) {
+            heroSeen.insert(first.id)
+            featuredItems.append(first)
+          }
+        }
+        featured = featuredItems
       }
     }
-    featured = featuredItems
 
     // Best-effort: a history failure should never surface an error on Home.
     let recent = (try? await history)?.history.map { $0.item } ?? []

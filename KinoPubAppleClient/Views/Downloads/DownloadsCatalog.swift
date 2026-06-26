@@ -37,7 +37,11 @@ class DownloadsCatalog: ObservableObject {
     self.activeDownloads = downloadManager.activeDownloads.map({ $0.value })
     cancellables.removeAll()
     self.activeDownloads.forEach({
-      let c = $0.objectWillChange.sink(receiveValue: { self.objectWillChange.send() })
+      // Re-deliver on the main queue asynchronously: a progress tick must not republish *during*
+      // a SwiftUI view update (that traps with "Publishing changes from within view updates").
+      let c = $0.objectWillChange
+        .receive(on: DispatchQueue.main)
+        .sink(receiveValue: { [weak self] in self?.objectWillChange.send() })
       self.cancellables.append(c)
     })
     
