@@ -92,6 +92,17 @@ public struct ContinueWatchingCard: View {
     .padding(12)
     .frame(width: width, alignment: .leading)
   }
+
+  /// Unified loading placeholder reserving the same footprint as a real card.
+  public static func placeholder(width: CGFloat = 300) -> some View {
+    ContinueWatchingCard(imageURL: nil,
+                         title: "Placeholder",
+                         subtitle: "Placeholder",
+                         progress: 0.4,
+                         width: width)
+      .redacted(reason: .placeholder)
+      .opacity(0.45)
+  }
 }
 
 struct ContinueWatchingCard_Previews: PreviewProvider {

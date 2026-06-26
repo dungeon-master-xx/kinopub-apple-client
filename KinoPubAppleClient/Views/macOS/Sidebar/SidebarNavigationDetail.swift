@@ -55,12 +55,18 @@ struct SidebarNavigationDetail: View {
                               errorHandler: errorHandler))
   }
 
+  /// The pending deep-link filter if it targets this content type.
+  private func categoryFilter(for type: MediaType) -> MediaItemsFilter? {
+    navigationState.pendingCategoryFilter?.contentType == type ? navigationState.pendingCategoryFilter : nil
+  }
+
   func mainCatalog(contentType: MediaType, shortcut: MediaShortcut) -> some View {
     MainView(catalog: MediaCatalog(itemsService: appContext.contentService,
                                    authState: authState,
                                    errorHandler: errorHandler,
                                    contentType: contentType,
-                                   shortcut: shortcut))
+                                   shortcut: shortcut,
+                                   filter: categoryFilter(for: contentType)))
   }
 
   var sport: some View {

@@ -74,6 +74,12 @@ class MediaItemModel: ObservableObject {
                      sort: nil)
   }
 
+  // MARK: - Facet filters (for deep-linking into the section)
+
+  func genreFilter(id: Int) -> MediaItemsFilter { facetFilter(genres: [id]) }
+  func countryFilter(id: Int) -> MediaItemsFilter { facetFilter(countries: [id]) }
+  func yearFilter(_ year: Int) -> MediaItemsFilter { facetFilter(year: "\(year)") }
+
   // MARK: - Tappable metadata routes
 
   /// Route to a catalog filtered by a single genre.

@@ -113,6 +113,11 @@ struct MainView: View {
       .task {
         await catalog.fetchItems()
       }
+      // The deep-link filter is already captured by the catalog above; clear it so a later
+      // manual selection of this section isn't unexpectedly pre-filtered.
+      .onAppear {
+        navigationState.pendingCategoryFilter = nil
+      }
     }
   }
   
@@ -250,8 +255,7 @@ struct PersonSearchView: View {
       LazyVGrid(columns: resultsColumns, spacing: 16) {
         ForEach(model.results, id: \.id) { item in
           if item.skeleton ?? false {
-            PosterCard(imageURL: nil, title: "Placeholder")
-              .redacted(reason: .placeholder)
+            PosterCard.placeholder()
           } else {
             NavigationLink(value: linkProvider.link(for: item)) {
               PosterCard(imageURL: item.posters.medium, title: item.localizedTitle)

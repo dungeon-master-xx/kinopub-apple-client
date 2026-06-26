@@ -64,13 +64,15 @@ class SearchModel: ObservableObject {
       .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
       .sink { [weak self] value in
         guard let self else { return }
-        // A manual edit of the search bar resets any preset person-search field
-        // (so typing a regular title query searches by title again). A value
-        // matching the active preset is the programmatic change and is left alone.
-        if value != self.presetQuery {
-          self.searchField = nil
-          self.presetQuery = nil
+        // The programmatic preset (person search) already ran the search in preset();
+        // skip here to avoid a second skeleton flash.
+        if value == self.presetQuery {
+          return
         }
+        // A manual edit of the search bar resets any preset person-search field
+        // (so typing a regular title query searches by title again).
+        self.searchField = nil
+        self.presetQuery = nil
         Task { await self.performSearch(query: value) }
       }.store(in: &bag)
   }

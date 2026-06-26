@@ -19,4 +19,7 @@ class NavigationState: ObservableObject {
   @Published var watchingRoutes: [WatchingRoutes] = []
   @Published var downloadsRoutes: [DownloadsRoutes] = []
   @Published var collectionsRoutes: [CollectionsRoutes] = []
+  /// A filter to apply when deep-linking into a Library category section (e.g. tapping a
+  /// genre on a title selects that category in the sidebar and pre-filters it). Consumed once.
+  @Published var pendingCategoryFilter: MediaItemsFilter?
 }
