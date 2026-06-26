@@ -73,11 +73,6 @@ class SearchModel: ObservableObject {
   @Published public var directorResults: [MediaItem] = []
   @Published public var scope: SearchScope = .all
 
-  /// People (from TMDB) the current query matched, shown above the films on the Actors/Directors tabs.
-  @Published public var matchedActors: [TMDBPerson] = []
-  @Published public var matchedDirectors: [TMDBPerson] = []
-  private let tmdbService: TMDBService = AppContext.shared.tmdbService
-
   /// Deduplicated union across all three scopes (skeletons excluded), for the "All" tab.
   public var allResults: [MediaItem] {
     var seen = Set<Int>()
@@ -172,29 +167,20 @@ class SearchModel: ObservableObject {
     titleResults = MediaItem.skeletonMock()
     castResults = []
     directorResults = []
-    matchedActors = []
-    matchedDirectors = []
 
     async let titles = contentService.search(query: trimmed, contentType: nil, field: nil, page: nil)
     async let cast = contentService.search(query: trimmed, contentType: nil, field: "cast", page: nil)
     async let directors = contentService.search(query: trimmed, contentType: nil, field: "director", page: nil)
-    // Which actual people matched the query (for the circles above the Actors/Directors results).
-    async let actorPeople = tmdbService.people(matching: trimmed, role: .acting)
-    async let directorPeople = tmdbService.people(matching: trimmed, role: .directing)
 
     let t = (try? await titles)?.items ?? []
     let c = (try? await cast)?.items ?? []
     let d = (try? await directors)?.items ?? []
-    let actors = await actorPeople
-    let directorsFound = await directorPeople
 
     // Ignore stale responses if the query changed while the requests were in flight.
     guard trimmed == pagedQuery else { return }
     titleResults = t
     castResults = c
     directorResults = d
-    matchedActors = actors
-    matchedDirectors = directorsFound
 
     // If the current tab has nothing but another does, jump to the richest one (e.g. a pure actor
     // name has 0 titles but many "Actors" hits — show that tab, as the web does).

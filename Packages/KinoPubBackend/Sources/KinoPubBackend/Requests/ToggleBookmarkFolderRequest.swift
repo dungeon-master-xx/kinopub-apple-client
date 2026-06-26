@@ -36,5 +36,7 @@ public struct ToggleBookmarkFolderRequest: Endpoint {
     nil
   }
 
-  public var forceSendAsGetParams: Bool { true }
+  // The server reads `item`/`folder` from the form BODY only — sent as query it returns
+  // 404 "item not found" and the toggle silently no-ops (verified live). Must be a body POST.
+  public var forceSendAsGetParams: Bool { false }
 }

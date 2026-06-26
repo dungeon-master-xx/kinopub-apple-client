@@ -14,6 +14,13 @@ protocol DeviceService {
   func updateSettings(deviceId: Int, settings: DeviceSettings) async throws
   /// Registers this device's name/specs so it isn't listed as "unknown".
   func registerDeviceName() async
+  /// Advertises this hardware's real capabilities (HEVC/4K) to the server so kino.pub serves
+  /// HEVC + HDR10 renditions to the native player. Enable-only; never turns a capability off.
+  func syncCapabilities() async
+  /// All devices on the account (`GET /v1/device`).
+  func listDevices() async throws -> [ManagedDevice]
+  /// Remove a device from the account (`POST /v1/device/<id>/remove`).
+  func removeDevice(id: Int) async throws
 }
 
 protocol DeviceServiceProvider {
@@ -37,4 +44,11 @@ struct DeviceServiceMock: DeviceService {
   func registerDeviceName() async {
     // no-op
   }
+
+  func syncCapabilities() async {
+    // no-op
+  }
+
+  func listDevices() async throws -> [ManagedDevice] { [] }
+  func removeDevice(id: Int) async throws {}
 }

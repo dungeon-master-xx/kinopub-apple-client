@@ -27,6 +27,22 @@ class BookmarksCatalog: ObservableObject {
     self.contentService = itemsService
     self.authState = authState
     self.errorHandler = errorHandler
+    observeFolderCache()
+  }
+
+  /// Keep the folder list in sync with the shared cache so a folder deleted on its detail screen
+  /// disappears here too (without a manual refresh).
+  private func observeFolderCache() {
+    AppContext.shared.libraryState.$bookmarkFolders
+      .dropFirst()
+      .receive(on: RunLoop.main)
+      .sink { [weak self] folders in
+        guard let self else { return }
+        self.items = folders
+        let ids = Set(folders.map { $0.id })
+        self.folderItems = self.folderItems.filter { ids.contains($0.key) }
+      }
+      .store(in: &bag)
   }
 
   func fetchItems() async {
@@ -35,14 +51,12 @@ class BookmarksCatalog: ObservableObject {
       return
     }
 
-    do {
-      let bookmarks = try await contentService.fetchBookmarks().items
-      items = bookmarks
-      await loadFolderItems(bookmarks)
-    } catch {
-      Logger.app.debug("fetch bookmarks error: \(error)")
-      errorHandler.setError(error)
-    }
+    // Folder list comes from the shared session cache (single source of truth across the app);
+    // only each folder's contents are fetched here.
+    await AppContext.shared.libraryState.loadBookmarkFoldersIfNeeded()
+    let bookmarks = AppContext.shared.libraryState.bookmarkFolders
+    items = bookmarks
+    await loadFolderItems(bookmarks)
   }
 
   /// Loads each folder's contents concurrently so every shelf can show its posters.
@@ -68,6 +82,8 @@ class BookmarksCatalog: ObservableObject {
     items = Bookmark.skeletonMock()
     folderItems = [:]
     Logger.app.debug("refetch bookmarks")
+    // Pull-to-refresh forces a fresh folder list (e.g. after creating/renaming a folder).
+    await AppContext.shared.libraryState.reloadBookmarkFolders()
     await fetchItems()
   }
 

@@ -87,7 +87,7 @@ struct MediaItemDescriptionCard: View {
       })
       // Picker to select quality of the item to download
       .confirmationDialog("", isPresented: $showDownloadPicker, titleVisibility: .hidden) {
-        ForEach(selectedDownloadableItem?.files ?? []) { file in
+        ForEach((selectedDownloadableItem?.files ?? []).dedupedByQuality) { file in
           Button(file.quality) {
             guard let selectedDownloadableItem else {
               return

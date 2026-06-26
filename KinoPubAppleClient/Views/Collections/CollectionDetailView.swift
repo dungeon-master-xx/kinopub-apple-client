@@ -22,6 +22,11 @@ struct CollectionDetailView: View {
       .navigationTitle(model.collection.title)
       .background(Color.KinoPub.background)
       .task { await model.fetchItems() }
+      .toolbar {
+        ToolbarItem(placement: .primaryAction) {
+          sortMenu
+        }
+      }
   }
 
   @ViewBuilder
@@ -54,7 +59,6 @@ struct CollectionDetailView: View {
           metaItem(systemImage: "clock", value: Self.dateText(from: updated))
         }
       }
-      sortMenu
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, 20)
@@ -113,7 +117,7 @@ struct CollectionDetailView: View {
                            },
                            navigationLinkProvider: { item in
                              RouteLinkProvider().link(for: item)
-                           })
+                           }, statusOverlay: { AnyView(MediaCardStatusBadge(item: $0)) })
     }
   }
 

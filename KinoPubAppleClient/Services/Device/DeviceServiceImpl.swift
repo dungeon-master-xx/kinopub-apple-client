@@ -41,6 +41,16 @@ final class DeviceServiceImpl: DeviceService {
                                            decodingType: EmptyResponseData.self)
   }
 
+  func listDevices() async throws -> [ManagedDevice] {
+    let request = ListDevicesRequest()
+    return try await apiClient.performRequest(with: request, decodingType: DevicesData.self).devices
+  }
+
+  func removeDevice(id: Int) async throws {
+    let request = RemoveDeviceRequest(id: id)
+    _ = try await apiClient.performRequest(with: request, decodingType: EmptyResponseData.self)
+  }
+
   func registerDeviceName() async {
     var title: String
     let hardware: String
@@ -67,6 +77,30 @@ final class DeviceServiceImpl: DeviceService {
       Logger.app.debug("device notify sent: \(title) / \(hardware) / \(software)")
     } catch {
       Logger.app.debug("device notify error: \(error)")
+    }
+  }
+
+  func syncCapabilities() async {
+    // Match the kino.pub device profile to what this hardware can DECODE. When HEVC decode is
+    // available we advertise HEVC + 4K (kino.pub then serves HEVC + HDR10; AVPlayer plays it, tone-
+    // mapping to SDR displays like the base iPad), AND turn on mixedPlaylist so the master also
+    // carries h264 variants — AVPlayer can't open an HEVC-only HDR master (error -11868/-17223,
+    // the crossed-out play), so the fallback guarantees playback while still allowing HDR where the
+    // device can use the HEVC variant. When HEVC isn't decodable, turn all three off (plain h264).
+    let hevc = DeviceCapabilities.supportsHEVC
+    do {
+      let device = try await fetchCurrentDevice()
+      var settings = try await fetchSettings(deviceId: device.id)
+      guard settings.supportHevc != hevc
+              || settings.support4k != hevc
+              || settings.mixedPlaylist != hevc else { return }
+      settings.supportHevc = hevc
+      settings.support4k = hevc
+      settings.mixedPlaylist = hevc
+      try await updateSettings(deviceId: device.id, settings: settings)
+      Logger.app.debug("device capabilities synced to HEVC-decodable=\(hevc) (+mixedPlaylist)")
+    } catch {
+      Logger.app.debug("syncCapabilities error: \(error)")
     }
   }
 

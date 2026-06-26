@@ -25,6 +25,11 @@ final class UserActionsServiceImpl: UserActionsService {
     let request = GetWatchingDataRequest(id: id, video: video, season: season)
     return try await apiClient.performRequest(with: request, decodingType: WatchData.self)
   }
+
+  func vote(id: Int, like: Int) async throws -> VoteData {
+    let request = VoteRequest(id: id, like: like)
+    return try await apiClient.performRequest(with: request, decodingType: VoteData.self)
+  }
   
   func toggleWatching(id: Int, video: Int?, season: Int?) async throws {
     // For a movie the API requires `video` to be OMITTED (not 0). The request drops -1, so a
@@ -48,13 +53,39 @@ final class UserActionsServiceImpl: UserActionsService {
     return try await apiClient.performRequest(with: request, decodingType: ArrayData<Bookmark>.self).items
   }
 
-  func renameBookmarkFolder(id: Int, title: String) async throws {
-    let request = RenameBookmarkFolderRequest(id: id, title: title)
-    _ = try await apiClient.performRequest(with: request, decodingType: EmptyResponseData.self)
+  func createBookmarkFolder(title: String) async throws -> Int {
+    let request = CreateBookmarkFolderRequest(title: title)
+    let response = try await apiClient.performRequest(with: request, decodingType: CreateBookmarkFolderData.self)
+    return response.folder.id
   }
 
   func removeBookmarkFolder(id: Int) async throws {
     let request = RemoveBookmarkFolderRequest(id: id)
+    _ = try await apiClient.performRequest(with: request, decodingType: EmptyResponseData.self)
+  }
+
+  func foldersContaining(itemId: Int) async throws -> [Int] {
+    let request = GetItemFoldersRequest(item: itemId)
+    let response = try await apiClient.performRequest(with: request, decodingType: ItemFoldersData.self)
+    return response.folders.map { $0.id }
+  }
+
+  // MARK: - History management
+
+  func clearHistory(forMedia id: Int) async throws {
+    try await clearHistory(scope: .media, id: id)
+  }
+
+  func clearHistory(forSeason id: Int) async throws {
+    try await clearHistory(scope: .season, id: id)
+  }
+
+  func clearHistory(forItem id: Int) async throws {
+    try await clearHistory(scope: .item, id: id)
+  }
+
+  private func clearHistory(scope: ClearHistoryRequest.Scope, id: Int) async throws {
+    let request = ClearHistoryRequest(scope: scope, id: id)
     _ = try await apiClient.performRequest(with: request, decodingType: EmptyResponseData.self)
   }
 

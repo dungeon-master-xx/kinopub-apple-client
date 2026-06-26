@@ -7,6 +7,7 @@
 
 import Foundation
 import KinoPubBackend
+import KinoPubUI
 import OSLog
 import KinoPubLogging
 import Combine
@@ -23,6 +24,7 @@ class HistoryModel: ObservableObject {
   @Published public var historyItems: [HistoryItem] = []
   @Published public var pagination: Pagination?
   @Published public var selectedType: MediaType?
+  @Published public var toastMessage: ToastMessage?
 
   init(itemsService: VideoContentService, authState: AuthState, errorHandler: ErrorHandler) {
     self.contentService = itemsService
@@ -110,6 +112,24 @@ class HistoryModel: ObservableObject {
       Logger.app.debug("load more history after item: \(item.id)")
       Task {
         await fetchItems()
+      }
+    }
+  }
+
+  /// Remove a title from watch history (kinoapi `clear-for-media`), optimistically dropping it from
+  /// the list and re-syncing on failure.
+  func removeFromHistory(_ historyItem: HistoryItem) {
+    let mediaId = historyItem.item.id
+    historyItems.removeAll { $0.item.id == mediaId }
+    items.removeAll { $0.id == mediaId }
+    Task {
+      do {
+        try await AppContext.shared.actionsService.clearHistory(forMedia: mediaId)
+        toastMessage = .info("Removed from history".localized)
+      } catch {
+        Logger.app.debug("clear history error: \(error)")
+        await refresh()
+        errorHandler.setError(error)
       }
     }
   }

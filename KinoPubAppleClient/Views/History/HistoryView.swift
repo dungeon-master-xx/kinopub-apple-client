@@ -30,6 +30,7 @@ struct HistoryView: View {
       }
       .routeDestinations()
       .handleError(state: $errorHandler.state)
+      .toast(message: $catalog.toastMessage)
     }
   }
 
@@ -90,6 +91,13 @@ struct HistoryView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .contextMenu {
+                  Button(role: .destructive) {
+                    catalog.removeFromHistory(historyItem)
+                  } label: {
+                    Label("Remove from history".localized, systemImage: "trash")
+                  }
+                }
               }
             }
             .padding(.horizontal, 20)

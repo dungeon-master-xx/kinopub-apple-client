@@ -33,11 +33,14 @@ final class VideoContentServiceImpl: VideoContentService {
 
   func filter(filter: MediaItemsFilter, page: Int?, forceRefresh: Bool) async throws -> PaginatedData<MediaItem> {
     let request = FilterItemsRequest(contentType: filter.contentType,
+                                     rawType: filter.rawType,
                                      genres: filter.genres,
                                      countries: filter.countries,
                                      year: filter.year,
                                      age: filter.age,
                                      sort: filter.sort,
+                                     director: filter.director,
+                                     cast: filter.cast,
                                      subtitles: filter.subtitles,
                                      imdb: filter.imdbParam,
                                      kinopoisk: filter.kinopoiskParam,
@@ -100,6 +103,11 @@ final class VideoContentServiceImpl: VideoContentService {
     let response = try await apiClient.performRequest(with: request,
                                                       decodingType: ArrayData<WatchingSerial>.self)
     return response
+  }
+
+  func fetchWatchingMovies() async throws -> ArrayData<WatchingSerial> {
+    let request = WatchingMoviesRequest()
+    return try await apiClient.performRequest(with: request, decodingType: ArrayData<WatchingSerial>.self)
   }
 
   func fetchTVChannels() async throws -> [TVChannel] {

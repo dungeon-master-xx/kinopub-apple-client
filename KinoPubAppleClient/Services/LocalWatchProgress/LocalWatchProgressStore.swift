@@ -70,6 +70,19 @@ final class LocalWatchProgressStore {
     persist()
   }
 
+  /// The resume entry for an item, if any (and past the minimum threshold).
+  /// A movie (`season == nil`) matches by id alone — there's a single resume point per movie, and
+  /// keying it by `episode` (derived from a flaky `videos.first.number`) doesn't round-trip reliably.
+  /// A series episode requires an exact `(season, episode)` match.
+  func entry(forId id: Int, season: Int?, episode: Int?) -> LocalWatchEntry? {
+    lock.lock(); defer { lock.unlock() }
+    guard let entry = entries[id], entry.position >= Self.minimumSeconds else { return nil }
+    if season == nil {
+      return entry.season == nil ? entry : nil
+    }
+    return (entry.season == season && entry.episode == episode) ? entry : nil
+  }
+
   /// Most-recently-watched first.
   func allEntries() -> [LocalWatchEntry] {
     lock.lock(); defer { lock.unlock() }

@@ -10,11 +10,16 @@ import Foundation
 public struct FilterItemsRequest: Endpoint {
 
   private var contentType: MediaType?
+  /// Overrides `type` with a raw value (e.g. comma-separated "movie,serial" for the Anime preset).
+  private var rawType: String?
   private var genres: [Int]?
   private var countries: [Int]?
   private var year: String?
   private var age: String?
   private var sort: String?
+  /// Filter by director / cast name — `/v1/items?director=`/`cast=` (verified to actually filter live).
+  private var director: String?
+  private var cast: String?
   private var subtitles: String?
   private var imdb: String?
   private var kinopoisk: String?
@@ -26,11 +31,14 @@ public struct FilterItemsRequest: Endpoint {
   private var page: Int?
 
   public init(contentType: MediaType? = nil,
+              rawType: String? = nil,
               genres: [Int]? = nil,
               countries: [Int]? = nil,
               year: String? = nil,
               age: String? = nil,
               sort: String? = nil,
+              director: String? = nil,
+              cast: String? = nil,
               subtitles: String? = nil,
               imdb: String? = nil,
               kinopoisk: String? = nil,
@@ -41,11 +49,14 @@ public struct FilterItemsRequest: Endpoint {
               translation: String? = nil,
               page: Int? = nil) {
     self.contentType = contentType
+    self.rawType = rawType
     self.genres = genres
     self.countries = countries
     self.year = year
     self.age = age
     self.sort = sort
+    self.director = director
+    self.cast = cast
     self.subtitles = subtitles
     self.imdb = imdb
     self.kinopoisk = kinopoisk
@@ -68,12 +79,22 @@ public struct FilterItemsRequest: Endpoint {
   public var parameters: [String: Any]? {
     var params = [String: Any]()
 
-    if let contentType = contentType {
+    if let rawType = rawType, !rawType.isEmpty {
+      params["type"] = rawType
+    } else if let contentType = contentType {
       params["type"] = contentType.rawValue
     }
 
     if let genres = genres, !genres.isEmpty {
       params["genre"] = genres.map { "\($0)" }.joined(separator: ",")
+    }
+
+    if let director = director, !director.isEmpty {
+      params["director"] = director
+    }
+
+    if let cast = cast, !cast.isEmpty {
+      params["cast"] = cast
     }
 
     if let countries = countries, !countries.isEmpty {

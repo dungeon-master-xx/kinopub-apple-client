@@ -26,15 +26,16 @@ public struct UpdateDeviceSettingsRequest: Endpoint {
   }
 
   public var parameters: [String: Any]? {
-    // Exactly the fields the kino.pub web modal posts (verified from the live form):
-    //   streamingType=4&serverLocation=1&support4k=0&supportHevc=0
-    // camelCase keys, booleans as 1/0, in the form body. SSL/HDR/mixedPlaylist aren't editable
-    // through this endpoint, so we don't send them.
+    // camelCase keys, booleans as 1/0, in the form body. The web modal posts streamingType/
+    // serverLocation/support4k/supportHevc; the endpoint also accepts mixedPlaylist (verified live),
+    // which we send so HEVC masters carry an h264 fallback (AVPlayer can't open an HEVC-only HDR
+    // master and shows the crossed-out play). SSL/HDR stay server-controlled.
     return [
       "streamingType": settings.streamingType,
       "serverLocation": settings.serverLocation,
       "support4k": settings.support4k ? 1 : 0,
-      "supportHevc": settings.supportHevc ? 1 : 0
+      "supportHevc": settings.supportHevc ? 1 : 0,
+      "mixedPlaylist": settings.mixedPlaylist ? 1 : 0
     ]
   }
 

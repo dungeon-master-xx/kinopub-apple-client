@@ -38,7 +38,8 @@ typealias AppContextProtocol = AuthorizationServiceProvider
 & UserServiceProvider
 & UserActionsServiceProvider
 & LocalWatchProgressProvider
-& TMDBServiceProvider
+& MediaLibraryProvider
+& EPGServiceProvider
 
 // MARK: - AppContext
 
@@ -47,6 +48,7 @@ struct AppContext: AppContextProtocol {
   var configuration: Configuration
   var authService: AuthorizationService
   var contentService: VideoContentService
+  var epgService: EPGService
   var collectionsService: CollectionsService
   var deviceService: DeviceService
   var accessTokenService: AccessTokenService
@@ -59,7 +61,7 @@ struct AppContext: AppContextProtocol {
   var seasonDownloadManager: SeasonDownloadManager
   var actionsService: UserActionsService
   var localProgressStore: LocalWatchProgressStore
-  var tmdbService: TMDBService
+  var libraryState: MediaLibraryStore
   /// Offline HLS downloads (iOS). Accessed directly via `AppContext.shared` (not in the protocol).
   var hlsDownloadsStore: HLSDownloadsStore
   var hlsDownloadManager: HLSAssetDownloadManager
@@ -104,13 +106,25 @@ struct AppContext: AppContextProtocol {
     }
     // Api Client
     let apiClient = makeApiClient(with: configuration.baseURL, accessTokenService: accessTokenService)
-    
+    let actionsService = UserActionsServiceImpl(apiClient: apiClient)
+
+    // Single client-side library state: optimistic bookmarks/watchlist/watched + cached bookmark
+    // folders + audio-track prefs + a façade over downloads and watch progress — one source of truth.
+    let localProgressStore = LocalWatchProgressStore()
+    let libraryState = MediaLibraryStore(downloadManager: downloadManager,
+                                         hlsDownloadManager: hlsDownloadManager,
+                                         hlsStore: hlsDownloadsStore,
+                                         downloadedFilesDatabase: downloadedFilesDatabase,
+                                         progressStore: localProgressStore,
+                                         actionsService: actionsService)
+
     let authService = AuthorizationServiceImpl(apiClient: apiClient,
                                                configuration: configuration,
                                                accessTokenService: accessTokenService)
     return AppContext(configuration: configuration,
                       authService: authService,
                       contentService: VideoContentServiceImpl(apiClient: apiClient),
+                      epgService: EPGServiceImpl(),
                       collectionsService: CollectionsServiceImpl(apiClient: apiClient),
                       deviceService: DeviceServiceImpl(apiClient: apiClient),
                       accessTokenService: accessTokenService,
@@ -121,9 +135,9 @@ struct AppContext: AppContextProtocol {
                       downloadedFilesDatabase: downloadedFilesDatabase,
                       downloadNotificationManager: downloadNotificationManager,
                       seasonDownloadManager: seasonDownloadManager,
-                      actionsService: UserActionsServiceImpl(apiClient: apiClient),
-                      localProgressStore: LocalWatchProgressStore(),
-                      tmdbService: TMDBServiceImpl(apiKey: configuration.tmdbAPIKey),
+                      actionsService: actionsService,
+                      localProgressStore: localProgressStore,
+                      libraryState: libraryState,
                       hlsDownloadsStore: hlsDownloadsStore,
                       hlsDownloadManager: hlsDownloadManager)
   }()

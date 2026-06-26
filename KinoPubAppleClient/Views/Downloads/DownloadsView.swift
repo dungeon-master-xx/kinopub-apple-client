@@ -109,7 +109,8 @@ struct DownloadsView: View {
       .padding(.horizontal, 14)
       .padding(.vertical, 7)
       .glassCapsule()
-      .listRowInsets(EdgeInsets(top: 8, leading: 4, bottom: 6, trailing: 4))
+      // Match the History sticky headers' left indent (20pt), not the List's default tight inset.
+      .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 6, trailing: 4))
       .listRowBackground(Color.clear)
   }
 
@@ -208,11 +209,12 @@ struct DownloadsView: View {
 /// A breakdown of the app's on-disk usage so the user can see where space goes (HLS downloads live in
 /// Library — invisible to the Files app — and keep every audio track, so they're bigger than the
 /// source). Lets the user clear the image cache and sweep orphaned download files.
-private struct StorageBreakdownView: View {
+struct StorageBreakdownView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.appContext) private var appContext
   @State private var breakdown: StorageUsage?
   @State private var busy = false
+  @State private var toast: ToastMessage?
 
   var body: some View {
     NavigationStack {
@@ -221,6 +223,7 @@ private struct StorageBreakdownView: View {
           Section {
             row("Downloads".localized, breakdown.downloads)
             row("Image cache".localized, breakdown.imageCache)
+            row("EPG", breakdown.epg)
             row("Other".localized, breakdown.other)
           } footer: {
             Text("HLS downloads are stored in the app's private storage (not visible in the Files app) and keep every audio track, so they're larger than the source file.".localized)
@@ -230,15 +233,27 @@ private struct StorageBreakdownView: View {
           }
           Section {
             Button("Clear image cache".localized) {
+              let freed = breakdown.imageCache
               ImageCache.shared.clear()
+              announce(freed: freed)
               recompute()
+            }
+            Button("Clear EPG cache".localized) {
+              let freed = breakdown.epg
+              Task {
+                await appContext.epgService.clearCache()
+                announce(freed: freed)
+                recompute()
+              }
             }
             Button("Remove leftover download files".localized) {
               busy = true
-              let keep: Set<String> = []
               DispatchQueue.global(qos: .utility).async {
-                AppContext.shared.hlsDownloadsStore.sweepOrphans(keepRelativePaths: keep)
-                DispatchQueue.main.async { recompute() }
+                let freed = AppContext.shared.hlsDownloadsStore.sweepOrphans(keepRelativePaths: [])
+                DispatchQueue.main.async {
+                  announce(freed: freed)
+                  recompute()
+                }
               }
             }
           }
@@ -253,7 +268,17 @@ private struct StorageBreakdownView: View {
         }
       }
     }
+    .toast(message: $toast)
     .onAppear(perform: recompute)
+  }
+
+  /// Confirms a cleanup action so it's obvious it ran: how much was freed, or that there was nothing.
+  private func announce(freed: Int64) {
+    if freed > 0 {
+      toast = .success(String(format: "Freed %@".localized, format(freed)))
+    } else {
+      toast = .info("Nothing to clear".localized)
+    }
   }
 
   private func row(_ title: String, _ bytes: Int64) -> some View {
@@ -280,7 +305,8 @@ private struct StorageUsage {
   let total: Int64
   let downloads: Int64
   let imageCache: Int64
-  var other: Int64 { max(0, total - downloads - imageCache) }
+  let epg: Int64
+  var other: Int64 { max(0, total - downloads - imageCache - epg) }
 
   static func compute(hlsStore: HLSDownloadsStore, mp4URLs: [URL]) -> StorageUsage {
     let home = URL(fileURLWithPath: NSHomeDirectory())
@@ -291,7 +317,8 @@ private struct StorageUsage {
     }
     let downloads = hlsStore.totalDownloadedBytes() + mp4
     let imageCache = Int64(ImageCache.shared.diskUsageBytes())
-    return StorageUsage(total: total, downloads: downloads, imageCache: imageCache)
+    let epg = EPGServiceImpl.diskUsageBytes()
+    return StorageUsage(total: total, downloads: downloads, imageCache: imageCache, epg: epg)
   }
 }
 

@@ -41,10 +41,13 @@ struct KinoPubAppleClientApp: App {
         .environmentObject(authState)
         .environmentObject(errorHandler)
         .environmentObject(networkMonitor)
+        .environmentObject(AppContext.shared.libraryState)
         // Register this device's name once authorized, so it isn't listed as "unknown".
         .task(id: authState.userState) {
           if authState.userState == .authorized {
             await AppContext.shared.deviceService.registerDeviceName()
+            // Advertise HEVC/4K so kino.pub serves HEVC + HDR10 streams to the native player.
+            await AppContext.shared.deviceService.syncCapabilities()
           }
         }
         // Ask once for permission to post download-complete notifications.

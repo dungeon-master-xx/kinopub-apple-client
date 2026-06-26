@@ -7,6 +7,7 @@
 
 import Foundation
 import KinoPubBackend
+import KinoPubUI
 import OSLog
 import KinoPubLogging
 
@@ -40,6 +41,7 @@ class BookmarkModel: ObservableObject {
 
   public var bookmark: Bookmark
   @Published public var items: [MediaItem] = MediaItem.skeletonMock()
+  @Published public var toastMessage: ToastMessage?
   @Published public var sort: BookmarkSort = .added
   /// Latest folder title (kept in sync after a rename so the nav bar updates).
   @Published public var title: String
@@ -90,15 +92,19 @@ class BookmarkModel: ObservableObject {
     }
   }
 
-  /// Rename the folder, then update the title shown in the nav bar.
-  func rename(to newTitle: String) async {
-    let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return }
+  /// Remove a single item from this folder (toggle-item against the folder). Optimistically drops
+  /// it from the list and syncs the shared library state so other screens update too.
+  func removeFromFolder(_ item: MediaItem) async {
+    let previous = items
+    items.removeAll { $0.id == item.id }  // optimistic
+    AppContext.shared.libraryState.setBookmark(itemId: item.id, folderId: bookmark.id, isOn: false)
     do {
-      try await actionsService.renameBookmarkFolder(id: bookmark.id, title: trimmed)
-      title = trimmed
+      try await actionsService.toggleBookmark(itemId: item.id, folderId: bookmark.id)
+      toastMessage = .info(String(format: "Removed from %@".localized, bookmark.title))
     } catch {
-      Logger.app.debug("rename bookmark folder error: \(error)")
+      items = previous  // revert
+      AppContext.shared.libraryState.setBookmark(itemId: item.id, folderId: bookmark.id, isOn: true)
+      Logger.app.debug("remove from folder error: \(error)")
       errorHandler.setError(error)
     }
   }
@@ -107,6 +113,8 @@ class BookmarkModel: ObservableObject {
   func delete() async -> Bool {
     do {
       try await actionsService.removeBookmarkFolder(id: bookmark.id)
+      // Drop it from the shared cache so the Bookmarks list removes the folder immediately.
+      AppContext.shared.libraryState.removeCachedBookmarkFolder(id: bookmark.id)
       return true
     } catch {
       Logger.app.debug("remove bookmark folder error: \(error)")

@@ -215,6 +215,7 @@ struct MoreView: View {
       List {
         Section("Library".localized) {
           ForEach(SidebarItem.libraryCategories, id: \.self) { type in categoryRow(type) }
+          ForEach(CatalogPreset.allCases) { preset in presetRow(preset) }
           sectionRow(.sport)
           sectionRow(.collections)
         }
@@ -258,6 +259,16 @@ struct MoreView: View {
     .listRowBackground(Color.KinoPub.background)
   }
 
+  /// A preset section (Cartoons / Anime / Stand-up / 3D) opens a filtered catalog with its type+genre.
+  private func presetRow(_ preset: CatalogPreset) -> some View {
+    let locked = !networkMonitor.isOnline
+    return NavigationLink(value: Route.filteredCatalog(preset.filter, preset.title.localized)) {
+      rowLabel(preset.title.localized, systemImage: preset.systemImage, locked: locked)
+    }
+    .disabled(locked)
+    .listRowBackground(Color.KinoPub.background)
+  }
+
   private func sectionRow(_ item: SidebarItem) -> some View {
     let locked = !networkMonitor.isOnline && !item.isAvailableOffline
     return NavigationLink(value: item) {
@@ -283,6 +294,7 @@ struct MoreView: View {
     switch item {
     case .sport:
       SportView(model: SportModel(itemsService: appContext.contentService,
+                                  epgService: appContext.epgService,
                                   authState: authState,
                                   errorHandler: errorHandler))
     case .collections:

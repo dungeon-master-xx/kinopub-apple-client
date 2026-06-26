@@ -11,8 +11,6 @@ protocol Configuration {
   var clientID: String { get }
   var clientSecret: String { get }
   var baseURL: String { get }
-  /// TMDB API key used to fetch cast photos (kino.pub returns cast as text only).
-  var tmdbAPIKey: String { get }
 }
 
 protocol ConfigurationProvider {

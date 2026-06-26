@@ -27,6 +27,10 @@ public struct WatchData: Codable, Hashable {
     public var title: String
     public var time: TimeInterval
     public var status: Int
+    /// Total length (seconds) and last-mark timestamp — present in the live response, previously
+    /// dropped. Optional so any slimmer response still decodes.
+    public var duration: TimeInterval?
+    public var updated: TimeInterval?
   }
   
   public var item: WatchDataItem
