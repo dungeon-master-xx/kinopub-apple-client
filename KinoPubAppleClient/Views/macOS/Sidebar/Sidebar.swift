@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import KinoPubUI
 import KinoPubBackend
+import KinoPubKit
 
 struct Sidebar: View {
 
@@ -18,6 +19,7 @@ struct Sidebar: View {
   @EnvironmentObject var authState: AuthState
   @EnvironmentObject var errorHandler: ErrorHandler
   @EnvironmentObject var navigationState: NavigationState
+  @EnvironmentObject var networkMonitor: NetworkMonitor
 
   @State private var showProfile = false
 
@@ -72,8 +74,20 @@ struct Sidebar: View {
 
   @ViewBuilder
   func row(_ item: SidebarItem) -> some View {
-    Label(item.title.localized, systemImage: item.systemImage)
-      .tag(item)
+    let locked = !networkMonitor.isOnline && !item.isAvailableOffline
+    Label {
+      HStack {
+        Text(item.title.localized)
+        if locked {
+          Spacer(minLength: 6)
+          Image(systemName: "lock.fill").font(.caption2)
+        }
+      }
+    } icon: {
+      Image(systemName: item.systemImage)
+    }
+    .foregroundStyle(locked ? Color.KinoPub.subtitle : Color.KinoPub.text)
+    .tag(item)
   }
 
   private var profileSheet: some View {

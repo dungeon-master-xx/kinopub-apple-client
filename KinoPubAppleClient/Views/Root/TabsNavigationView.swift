@@ -9,14 +9,22 @@ import Foundation
 import SwiftUI
 import KinoPubUI
 import KinoPubBackend
+import KinoPubKit
 
 struct TabsNavigationView: View {
-  
+
   @Environment(\.appContext) var appContext
   @EnvironmentObject var navigationState: NavigationState
   @EnvironmentObject var errorHandler: ErrorHandler
   @EnvironmentObject var authState: AuthState
-  
+  @EnvironmentObject var networkMonitor: NetworkMonitor
+
+  @State private var selectedTab: NavigationTabs = .main
+  /// Section the user was on before going offline, restored automatically on reconnect.
+  @State private var sectionBeforeOffline: NavigationTabs?
+  /// Briefly shows the green "back online" banner after reconnecting.
+  @State private var showReconnected = false
+
   var placement: ToolbarPlacement {
 #if os(iOS)
     .tabBar
@@ -26,7 +34,7 @@ struct TabsNavigationView: View {
   }
   
   var body: some View {
-    TabView {
+    TabView(selection: $selectedTab) {
       searchTab
       mainTab
       sportTab
@@ -39,6 +47,17 @@ struct TabsNavigationView: View {
       profileTab
     }
     .accentColor(Color.KinoPub.accent)
+    .safeAreaInset(edge: .top, spacing: 0) {
+      if let banner = bannerState {
+        OfflineBanner(tone: banner.tone, title: banner.title)
+          .transition(.move(edge: .top).combined(with: .opacity))
+      }
+    }
+    .animation(.easeInOut(duration: 0.25), value: networkMonitor.isOnline)
+    .animation(.easeInOut(duration: 0.25), value: showReconnected)
+    .onChange(of: networkMonitor.isOnline) { online in
+      handleConnectivityChange(online: online)
+    }
     .sheet(isPresented: $authState.shouldShowAuthentication, content: {
       AuthView(model: AuthModel(authService: appContext.authService,
                                 authState: authState,
@@ -52,11 +71,62 @@ struct TabsNavigationView: View {
       }
     }
   }
+
+  // MARK: - Offline mode
+
+  private var bannerState: (tone: OfflineBanner.Tone, title: String)? {
+    if !networkMonitor.isOnline {
+      return (.warning, "You're offline — your downloads are available".localized)
+    }
+    if showReconnected {
+      return (.success, "Back online".localized)
+    }
+    return nil
+  }
+
+  private func handleConnectivityChange(online: Bool) {
+    if !online {
+      // Entering offline: remember where we were and jump to the always-available Downloads.
+      if selectedTab != .downloads && selectedTab != .profile {
+        sectionBeforeOffline = selectedTab
+      }
+      selectedTab = .downloads
+    } else {
+      // Reconnected: auto-restore the previous section — unless the user is mid-playback / deep in
+      // a downloaded item (don't interrupt). Show a brief "back online" confirmation either way.
+      showReconnected = true
+      if navigationState.downloadsRoutes.isEmpty, let previous = sectionBeforeOffline {
+        selectedTab = previous
+      }
+      sectionBeforeOffline = nil
+      Task {
+        try? await Task.sleep(nanoseconds: 2_500_000_000)
+        showReconnected = false
+      }
+    }
+  }
+
+  /// Network-only sections show a "needs connection" placeholder while offline.
+  @ViewBuilder
+  private func networkGated<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+    if networkMonitor.isOnline {
+      content()
+    } else {
+      OfflineUnavailableView(title: "Needs a connection".localized,
+                             message: "This section isn't available offline.".localized,
+                             actionTitle: "Go to Downloads".localized) {
+        selectedTab = .downloads
+      }
+      .background(Color.KinoPub.background)
+    }
+  }
   
   var searchTab: some View {
-    SearchView(model: SearchModel(itemsService: appContext.contentService,
-                                  authState: authState,
-                                  errorHandler: errorHandler))
+    networkGated {
+      SearchView(model: SearchModel(itemsService: appContext.contentService,
+                                    authState: authState,
+                                    errorHandler: errorHandler))
+    }
     .tag(NavigationTabs.search)
     .tabItem {
       Label("Search", systemImage: "magnifyingglass")
@@ -65,9 +135,11 @@ struct TabsNavigationView: View {
   }
 
   var mainTab: some View {
-    HomeView(model: HomeModel(itemsService: appContext.contentService,
-                              authState: authState,
-                              errorHandler: errorHandler))
+    networkGated {
+      HomeView(model: HomeModel(itemsService: appContext.contentService,
+                                authState: authState,
+                                errorHandler: errorHandler))
+    }
     .tag(NavigationTabs.main)
     .tabItem {
       Label("Home", systemImage: "house")
@@ -76,9 +148,11 @@ struct TabsNavigationView: View {
   }
   
   var sportTab: some View {
-    SportView(model: SportModel(itemsService: appContext.contentService,
-                                authState: authState,
-                                errorHandler: errorHandler))
+    networkGated {
+      SportView(model: SportModel(itemsService: appContext.contentService,
+                                  authState: authState,
+                                  errorHandler: errorHandler))
+    }
     .tag(NavigationTabs.sport)
     .tabItem {
       Label("Sport", systemImage: "sportscourt")
@@ -87,9 +161,11 @@ struct TabsNavigationView: View {
   }
 
   var collectionsTab: some View {
-    CollectionsView(model: CollectionsModel(collectionsService: appContext.collectionsService,
-                                            authState: authState,
-                                            errorHandler: errorHandler))
+    networkGated {
+      CollectionsView(model: CollectionsModel(collectionsService: appContext.collectionsService,
+                                              authState: authState,
+                                              errorHandler: errorHandler))
+    }
     .tag(NavigationTabs.collections)
     .tabItem {
       Label("Collections", systemImage: "rectangle.stack")
@@ -98,9 +174,11 @@ struct TabsNavigationView: View {
   }
 
   var bookmarksTab: some View {
-    BookmarksView(catalog: BookmarksCatalog(itemsService: appContext.contentService,
-                                            authState: authState,
-                                            errorHandler: errorHandler))
+    networkGated {
+      BookmarksView(catalog: BookmarksCatalog(itemsService: appContext.contentService,
+                                              authState: authState,
+                                              errorHandler: errorHandler))
+    }
     .tag(NavigationTabs.bookmarks)
     .tabItem {
       Label("Bookmarks", systemImage: "bookmark")
@@ -109,10 +187,12 @@ struct TabsNavigationView: View {
   }
   
   var newEpisodesTab: some View {
-    WatchingView(model: WatchingModel(itemsService: appContext.contentService,
-                                      authState: authState,
-                                      errorHandler: errorHandler,
-                                      tab: .newEpisodes))
+    networkGated {
+      WatchingView(model: WatchingModel(itemsService: appContext.contentService,
+                                        authState: authState,
+                                        errorHandler: errorHandler,
+                                        tab: .newEpisodes))
+    }
     .tag(NavigationTabs.newEpisodes)
     .tabItem {
       Label("New episodes", systemImage: "sparkles.tv")
@@ -121,10 +201,12 @@ struct TabsNavigationView: View {
   }
 
   var watchingTab: some View {
-    WatchingView(model: WatchingModel(itemsService: appContext.contentService,
-                                      authState: authState,
-                                      errorHandler: errorHandler,
-                                      tab: .watchlist))
+    networkGated {
+      WatchingView(model: WatchingModel(itemsService: appContext.contentService,
+                                        authState: authState,
+                                        errorHandler: errorHandler,
+                                        tab: .watchlist))
+    }
     .tag(NavigationTabs.watching)
     .tabItem {
       Label("Watching", systemImage: "play.tv")
@@ -133,9 +215,11 @@ struct TabsNavigationView: View {
   }
 
   var historyTab: some View {
-    HistoryView(catalog: HistoryModel(itemsService: appContext.contentService,
-                                      authState: authState,
-                                      errorHandler: errorHandler))
+    networkGated {
+      HistoryView(catalog: HistoryModel(itemsService: appContext.contentService,
+                                        authState: authState,
+                                        errorHandler: errorHandler))
+    }
     .tag(NavigationTabs.history)
     .tabItem {
       Label("History", systemImage: "clock.arrow.circlepath")

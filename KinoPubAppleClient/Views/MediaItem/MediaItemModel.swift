@@ -191,8 +191,30 @@ class MediaItemModel: ObservableObject {
   }
   
   func startDownload(item: DownloadableMediaItem, file: FileInfo) {
+    let meta = DownloadMeta.make(from: item, quality: file.quality)
+#if os(iOS)
+    // Prefer the HLS master so the offline copy keeps full quality + every audio track (озвучка) +
+    // subtitles, switchable during playback (mp4 would bake in a single track). macOS falls back to mp4.
+    if let hlsURL = URL(string: file.url.hls4) {
+      AppContext.shared.hlsDownloadManager.startDownload(meta: meta, hlsURL: hlsURL)
+      toastMessage = "Download started".localized
+      return
+    }
+#endif
     guard let url = URL(string: file.url.http) else { return }
-    _ = downloadManager.startDownload(url: url, withMetadata: DownloadMeta.make(from: item, quality: file.quality))
+    _ = downloadManager.startDownload(url: url, withMetadata: meta)
+  }
+
+  /// Enqueues every episode of `season`. `quality` of nil downloads the best available per episode.
+  func downloadSeason(_ season: Season, quality: String?) {
+    let count = AppContext.shared.seasonDownloadManager.downloadSeason(
+      mediaId: mediaItem.id,
+      seriesTitle: mediaItem.localizedTitle,
+      season: season,
+      quality: quality)
+    toastMessage = count > 0
+      ? String(format: "%d episodes queued".localized, count)
+      : "Nothing to download".localized
   }
 
   func toggleWatched() {

@@ -57,6 +57,14 @@ enum SidebarItem: Hashable, Identifiable {
     .movie, .serial, .concert, .documovie, .docuserial, .tvshow
   ]
 
+  /// Sections usable without a network connection (everything else is locked offline).
+  var isAvailableOffline: Bool {
+    switch self {
+    case .downloads, .profile: return true
+    default: return false
+    }
+  }
+
   var title: String {
     switch self {
     case .search: return "Search"

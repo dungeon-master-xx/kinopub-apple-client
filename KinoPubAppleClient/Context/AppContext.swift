@@ -55,9 +55,14 @@ struct AppContext: AppContextProtocol {
   var fileSaver: FileSaving
   var downloadManager: DownloadManager<DownloadMeta>
   var downloadedFilesDatabase: DownloadedFilesDatabase<DownloadMeta>
+  var downloadNotificationManager: DownloadNotificationManager
+  var seasonDownloadManager: SeasonDownloadManager
   var actionsService: UserActionsService
   var localProgressStore: LocalWatchProgressStore
   var tmdbService: TMDBService
+  /// Offline HLS downloads (iOS). Accessed directly via `AppContext.shared` (not in the protocol).
+  var hlsDownloadsStore: HLSDownloadsStore
+  var hlsDownloadManager: HLSAssetDownloadManager
 
   static let shared: AppContext = {
     let configuration = BundleConfiguration()
@@ -72,6 +77,31 @@ struct AppContext: AppContextProtocol {
     let downloadManager = DownloadManager<DownloadMeta>(fileSaver: fileSaver,
                                                         database: downloadedFilesDatabase,
                                                         controlDatabase: downloadsControlDatabase)
+    let downloadNotificationManager = DownloadNotificationManager()
+    let seasonDownloadManager = SeasonDownloadManager(downloadManager: downloadManager,
+                                                      notifications: downloadNotificationManager)
+    // Offline HLS downloads (iOS): keeps quality + all audio tracks + subtitles. Notifications mirror
+    // the mp4 path. On macOS HLSAssetDownloadManager is a no-op shim (mp4 path is used there).
+    let hlsDownloadsStore = HLSDownloadsStore()
+    let hlsDownloadManager = HLSAssetDownloadManager(store: hlsDownloadsStore)
+    hlsDownloadManager.onDownloadFinished = { [weak downloadNotificationManager] meta in
+      downloadNotificationManager?.notifyFinished(title: meta.notificationTitle, identifier: "\(meta.id)")
+    }
+    hlsDownloadManager.onDownloadFailed = { [weak downloadNotificationManager] meta in
+      downloadNotificationManager?.notifyFailed(title: meta.notificationTitle, identifier: "\(meta.id)")
+    }
+    hlsDownloadManager.restorePendingDownloads()
+    // Post a local notification when a download finishes/fails. Episodes that belong to a bulk
+    // season download are folded into a single "season downloaded" notification instead.
+    downloadManager.onDownloadFinished = { [weak seasonDownloadManager, weak downloadNotificationManager] url, meta in
+      let handledBySeason = seasonDownloadManager?.handleFinished(url: url) ?? false
+      if !handledBySeason {
+        downloadNotificationManager?.notifyFinished(title: meta.notificationTitle, identifier: "\(meta.id)")
+      }
+    }
+    downloadManager.onDownloadFailed = { [weak downloadNotificationManager] _, meta, _ in
+      downloadNotificationManager?.notifyFailed(title: meta.notificationTitle, identifier: "\(meta.id)")
+    }
     // Api Client
     let apiClient = makeApiClient(with: configuration.baseURL, accessTokenService: accessTokenService)
     
@@ -89,9 +119,13 @@ struct AppContext: AppContextProtocol {
                       fileSaver: fileSaver,
                       downloadManager: downloadManager,
                       downloadedFilesDatabase: downloadedFilesDatabase,
+                      downloadNotificationManager: downloadNotificationManager,
+                      seasonDownloadManager: seasonDownloadManager,
                       actionsService: UserActionsServiceImpl(apiClient: apiClient),
                       localProgressStore: LocalWatchProgressStore(),
-                      tmdbService: TMDBServiceImpl(apiKey: configuration.tmdbAPIKey))
+                      tmdbService: TMDBServiceImpl(apiKey: configuration.tmdbAPIKey),
+                      hlsDownloadsStore: hlsDownloadsStore,
+                      hlsDownloadManager: hlsDownloadManager)
   }()
   
   // MARK: - API Client building
@@ -102,6 +136,7 @@ struct AppContext: AppContextProtocol {
                 CURLLoggingPlugin(),
                 ResponseLoggingPlugin(),
                 AccessTokenPlugin(accessTokenService: accessTokenService)
-              ])
+              ],
+              cache: ResponseCache())
   }
 }

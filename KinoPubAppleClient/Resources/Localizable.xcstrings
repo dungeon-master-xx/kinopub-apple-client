@@ -43,6 +43,32 @@
         }
       }
     },
+    "%@%lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@%2$lld"
+          }
+        }
+      }
+    },
+    "%d episodes queued": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d episodes queued"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В очереди: %d эп."
+          }
+        }
+      }
+    },
     "%lld": {
       "localizations": {
         "en": {
@@ -101,6 +127,22 @@
         }
       }
     },
+    "Actors": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actors"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Актеры"
+          }
+        }
+      }
+    },
     "Add to Bookmark": {
       "localizations": {
         "en": {
@@ -150,6 +192,7 @@
       }
     },
     "Age": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -410,6 +453,54 @@
         }
       }
     },
+    "Auto": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Авто"
+          }
+        }
+      }
+    },
+    "Be the first to discuss this title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Be the first to discuss this title"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Будьте первым, кто обсудит этот тайтл"
+          }
+        }
+      }
+    },
+    "Best quality": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Best quality"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Лучшее качество"
+          }
+        }
+      }
+    },
     "Bookmarks": {
       "localizations": {
         "en": {
@@ -550,6 +641,22 @@
         }
       }
     },
+    "Caps streaming quality. Auto lets the player adapt to your connection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caps streaming quality. Auto lets the player adapt to your connection."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ограничивает качество стрима. «Авто» — плеер сам подстраивается под соединение."
+          }
+        }
+      }
+    },
     "Cast & Crew": {
       "localizations": {
         "en": {
@@ -643,6 +750,22 @@
         }
       }
     },
+    "Clear key": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear key"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить ключ"
+          }
+        }
+      }
+    },
     "Collections": {
       "localizations": {
         "en": {
@@ -655,6 +778,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Подборки"
+          }
+        }
+      }
+    },
+    "Comments": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comments"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Комментарии"
           }
         }
       }
@@ -717,6 +856,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Продолжить просмотр с"
+          }
+        }
+      }
+    },
+    "Couldn't load comments": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load comments"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось загрузить комментарии"
           }
         }
       }
@@ -938,6 +1093,22 @@
         }
       }
     },
+    "Directors": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Directors"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Режиссеры"
+          }
+        }
+      }
+    },
     "Documental": {
       "extractionState": "manual",
       "localizations": {
@@ -1012,6 +1183,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "Скачать"
+          }
+        }
+      }
+    },
+    "Download complete": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download complete"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загрузка завершена"
+          }
+        }
+      }
+    },
+    "Download failed": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download failed"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ошибка загрузки"
+          }
+        }
+      }
+    },
+    "Download started": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download started"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загрузка началась"
+          }
+        }
+      }
+    },
+    "Download whole season": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download whole season"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скачать весь сезон"
           }
         }
       }
@@ -1339,9 +1576,6 @@
         }
       }
     },
-    "HLS": {},
-    "HLS2": {},
-    "HLS4": {},
     "Home": {
       "localizations": {
         "en": {
@@ -1381,7 +1615,6 @@
         }
       }
     },
-    "HTTP": {},
     "Image Cache": {
       "localizations": {
         "en": {
@@ -1539,6 +1772,22 @@
         }
       }
     },
+    "left": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "left"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "осталось"
+          }
+        }
+      }
+    },
     "Library": {
       "localizations": {
         "en": {
@@ -1662,6 +1911,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Отметить просмотренным"
+          }
+        }
+      }
+    },
+    "Maximum Quality": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maximum Quality"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Максимальное качество"
           }
         }
       }
@@ -1913,6 +2178,7 @@
       }
     },
     "Mixed playlist": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2143,6 +2409,22 @@
         }
       }
     },
+    "No comments yet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No comments yet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пока нет комментариев"
+          }
+        }
+      }
+    },
     "No history yet": {
       "localizations": {
         "en": {
@@ -2209,6 +2491,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Здесь пока нет сериалов"
+          }
+        }
+      }
+    },
+    "Nothing found": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing found"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ничего не найдено"
+          }
+        }
+      }
+    },
+    "Nothing to download": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to download"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нечего загружать"
           }
         }
       }
@@ -2300,6 +2614,7 @@
       }
     },
     "Period": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -2660,6 +2975,22 @@
         }
       }
     },
+    "Saved": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранено"
+          }
+        }
+      }
+    },
     "Saved to %@": {
       "localizations": {
         "en": {
@@ -2704,6 +3035,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сезон"
+          }
+        }
+      }
+    },
+    "Season downloaded": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Season downloaded"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сезон загружен"
           }
         }
       }
@@ -2976,6 +3324,7 @@
       }
     },
     "Subtitles": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3073,6 +3422,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Название"
+          }
+        }
+      }
+    },
+    "Titles": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titles"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Названия"
+          }
+        }
+      }
+    },
+    "TMDB": {},
+    "TMDB API key": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDB API key"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключ API TMDB"
           }
         }
       }
@@ -3181,6 +3563,7 @@
       }
     },
     "Translation": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3192,6 +3575,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Перевод"
+          }
+        }
+      }
+    },
+    "Try a different title, actor or director.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try a different title, actor or director."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Попробуйте другое название, актёра или режиссёра."
           }
         }
       }
@@ -3291,6 +3690,7 @@
       }
     },
     "Use SSL": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3302,6 +3702,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Использовать SSL"
+          }
+        }
+      }
+    },
+    "Used to show cast & crew photos. Get a free API key at themoviedb.org.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used to show cast & crew photos. Get a free API key at themoviedb.org."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Используется для показа фото актёров и съёмочной группы. Бесплатный ключ можно получить на themoviedb.org."
           }
         }
       }
@@ -3346,6 +3762,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Подписка"
+          }
+        }
+      }
+    },
+    "Video Quality": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video Quality"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Качество видео"
           }
         }
       }
@@ -3598,162 +4030,82 @@
     },
     "ЕЩЕ": {},
     "Свернуть": {},
-    "Nothing found": {
+    "You're offline — your downloads are available": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nothing found"
+            "value": "You're offline — your downloads are available"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ничего не найдено"
+            "value": "Нет сети — доступны загрузки"
           }
         }
       }
     },
-    "Try a different title, actor or director.": {
+    "Back online": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Try a different title, actor or director."
+            "value": "Back online"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Попробуйте другое название, актёра или режиссёра."
+            "value": "Снова в сети"
           }
         }
       }
     },
-    "Titles": {
+    "Needs a connection": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Titles"
+            "value": "Needs a connection"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Названия"
+            "value": "Нужно подключение"
           }
         }
       }
     },
-    "Actors": {
+    "This section isn't available offline.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Actors"
+            "value": "This section isn't available offline."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Актеры"
+            "value": "Этот раздел недоступен офлайн."
           }
         }
       }
     },
-    "Directors": {
+    "Go to Downloads": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Directors"
+            "value": "Go to Downloads"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Режиссеры"
-          }
-        }
-      }
-    },
-    "left": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "left"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "осталось"
-          }
-        }
-      }
-    },
-    "Saved": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saved"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сохранено"
-          }
-        }
-      }
-    },
-    "TMDB API key": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TMDB API key"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ключ API TMDB"
-          }
-        }
-      }
-    },
-    "Used to show cast & crew photos. Get a free API key at themoviedb.org.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Used to show cast & crew photos. Get a free API key at themoviedb.org."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Используется для показа фото актёров и съёмочной группы. Бесплатный ключ можно получить на themoviedb.org."
-          }
-        }
-      }
-    },
-    "Clear key": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clear key"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Удалить ключ"
+            "value": "Перейти к загрузкам"
           }
         }
       }

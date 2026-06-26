@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import FirebaseCore
+import KinoPubKit
 
 enum WindowSize {
   static let macos = CGSize(width: 1280, height: 720)
@@ -19,7 +19,8 @@ struct KinoPubAppleClientApp: App {
   @StateObject var errorHandler = ErrorHandler()
   @StateObject var authState = AuthState(authService: AppContext.shared.authService,
                                          accessTokenService: AppContext.shared.accessTokenService)
-  
+  @StateObject var networkMonitor = NetworkMonitor()
+
 #if os(macOS)
   @StateObject var windowSettings = WindowSettings()
 #endif
@@ -39,11 +40,16 @@ struct KinoPubAppleClientApp: App {
         .environmentObject(navigationState)
         .environmentObject(authState)
         .environmentObject(errorHandler)
+        .environmentObject(networkMonitor)
         // Register this device's name once authorized, so it isn't listed as "unknown".
         .task(id: authState.userState) {
           if authState.userState == .authorized {
             await AppContext.shared.deviceService.registerDeviceName()
           }
+        }
+        // Ask once for permission to post download-complete notifications.
+        .task {
+          await AppContext.shared.downloadNotificationManager.requestPermission()
         }
 #if os(macOS)
         .frame(minWidth: WindowSize.macos.width, minHeight: WindowSize.macos.height)

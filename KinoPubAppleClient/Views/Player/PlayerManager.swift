@@ -28,6 +28,12 @@ class PlayerManager: ObservableObject {
   lazy var player: AVPlayer = {
     guard let fileURL else { return AVPlayer() }
     let item = AVPlayerItem(url: fileURL)
+    // Cap the adaptive HLS stream to the user's chosen quality. kino.pub serves one master
+    // playlist with every rendition, so this is the lever that limits quality — `.auto` leaves
+    // it untouched. Harmless for local/trailer playback (no effect on non-HLS items).
+    if watchMode == .media, let maxResolution = StreamQuality.current.maxResolution {
+      item.preferredMaximumResolution = maxResolution
+    }
     // Surface the title (and season/episode) in the native player UI (iOS/tvOS only).
     #if !os(macOS)
     item.externalMetadata = externalMetadata()
@@ -71,6 +77,12 @@ class PlayerManager: ObservableObject {
   private var fileURL: URL? {
     switch watchMode {
     case .media:
+      // Prefer a downloaded offline HLS asset (.movpkg) — full quality + all audio tracks + subtitles.
+      if let hls = AppContext.shared.hlsDownloadsStore.asset(forId: playItem.id,
+                                                             video: playItem.metadata.video,
+                                                             season: playItem.metadata.season) {
+        return hls.localFileURL
+      }
       let downloadedFiles = downloadedFilesDatabase.readData() ?? []
       let sameItem = downloadedFiles.filter { $0.metadata.id == playItem.id }
       // For a series there can be several downloads under the same (series) id, plus stale rows whose
