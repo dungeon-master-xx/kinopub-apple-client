@@ -29,6 +29,8 @@ struct TabsNavigationView: View {
     TabView {
       mainTab
       bookmarksTab
+      watchingTab
+      historyTab
       downloadsTab
       profileTab
     }
@@ -69,6 +71,28 @@ struct TabsNavigationView: View {
     .toolbarBackground(Color.KinoPub.background, for: placement)
   }
   
+  var watchingTab: some View {
+    WatchingView(model: WatchingModel(itemsService: appContext.contentService,
+                                      authState: authState,
+                                      errorHandler: errorHandler))
+    .tag(NavigationTabs.watching)
+    .tabItem {
+      Label("Watching", systemImage: "play.tv")
+    }
+    .toolbarBackground(Color.KinoPub.background, for: placement)
+  }
+
+  var historyTab: some View {
+    HistoryView(catalog: HistoryModel(itemsService: appContext.contentService,
+                                      authState: authState,
+                                      errorHandler: errorHandler))
+    .tag(NavigationTabs.history)
+    .tabItem {
+      Label("History", systemImage: "clock.arrow.circlepath")
+    }
+    .toolbarBackground(Color.KinoPub.background, for: placement)
+  }
+
   var downloadsTab: some View {
     DownloadsView(catalog: DownloadsCatalog(downloadsDatabase: appContext.downloadedFilesDatabase, downloadManager: appContext.downloadManager))
       .tag(NavigationTabs.downloads)

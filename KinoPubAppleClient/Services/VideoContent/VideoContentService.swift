@@ -11,9 +11,12 @@ import KinoPubBackend
 protocol VideoContentService {
   func fetch(shortcut: MediaShortcut, contentType: MediaType, page: Int?) async throws -> PaginatedData<MediaItem>
   func search(query: String?, page: Int?) async throws -> PaginatedData<MediaItem>
+  func filter(filter: MediaItemsFilter, page: Int?) async throws -> PaginatedData<MediaItem>
   func fetchDetails(for id: String) async throws -> SingleItemData<MediaItem>
   func fetchBookmarks() async throws -> ArrayData<Bookmark>
   func fetchBookmarkItems(id: String) async throws -> ArrayData<MediaItem>
+  func fetchHistory(page: Int?) async throws -> HistoryData
+  func fetchWatchingSerials(subscribed: Int?) async throws -> ArrayData<WatchingSerial>
 }
 
 protocol VideoContentServiceProvider {
@@ -30,6 +33,10 @@ struct VideoContentServiceMock: VideoContentService {
     return PaginatedData.mock(data: [])
   }
 
+  func filter(filter: MediaItemsFilter, page: Int?) async throws -> PaginatedData<MediaItem> {
+    return PaginatedData.mock(data: [])
+  }
+
   func fetchDetails(for id: String) async throws -> SingleItemData<MediaItem> {
     return SingleItemData.mock(data: MediaItem.mock())
   }
@@ -39,6 +46,14 @@ struct VideoContentServiceMock: VideoContentService {
   }
   
   func fetchBookmarkItems(id: String) async throws -> ArrayData<MediaItem> {
+    return ArrayData.mock(data: [])
+  }
+
+  func fetchHistory(page: Int?) async throws -> HistoryData {
+    return HistoryData.mock(data: [])
+  }
+
+  func fetchWatchingSerials(subscribed: Int?) async throws -> ArrayData<WatchingSerial> {
     return ArrayData.mock(data: [])
   }
 

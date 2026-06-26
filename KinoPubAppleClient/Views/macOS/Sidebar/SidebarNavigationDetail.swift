@@ -7,45 +7,67 @@
 
 import Foundation
 import SwiftUI
+import KinoPubBackend
 
-#if os(macOS)
 struct SidebarNavigationDetail: View {
   @Environment(\.appContext) var appContext
   @EnvironmentObject var navigationState: NavigationState
   @EnvironmentObject var errorHandler: ErrorHandler
   @EnvironmentObject var authState: AuthState
-  
-  @Binding var selection: NavigationTabs
-  
+
+  @Binding var selection: SidebarItem?
+
   var body: some View {
-    switch selection {
-    case .main:
-      main
+    switch selection ?? .new {
+    case .new:
+      mainCatalog(contentType: .movie, shortcut: .fresh)
+        .id("library-new")
+    case .category(let type):
+      mainCatalog(contentType: type, shortcut: .hot)
+        .id("library-\(type.rawValue)")
+    case .watching:
+      watching
     case .bookmarks:
       bookmarks
+    case .history:
+      history
     case .downloads:
       downloads
     case .profile:
       profile
     }
   }
-  
-  var main: some View {
+
+  func mainCatalog(contentType: MediaType, shortcut: MediaShortcut) -> some View {
     MainView(catalog: MediaCatalog(itemsService: appContext.contentService,
                                    authState: authState,
-                                   errorHandler: errorHandler))
+                                   errorHandler: errorHandler,
+                                   contentType: contentType,
+                                   shortcut: shortcut))
   }
-  
+
+  var watching: some View {
+    WatchingView(model: WatchingModel(itemsService: appContext.contentService,
+                                      authState: authState,
+                                      errorHandler: errorHandler))
+  }
+
   var bookmarks: some View {
     BookmarksView(catalog: BookmarksCatalog(itemsService: appContext.contentService,
                                             authState: authState,
                                             errorHandler: errorHandler))
   }
-  
+
+  var history: some View {
+    HistoryView(catalog: HistoryModel(itemsService: appContext.contentService,
+                                      authState: authState,
+                                      errorHandler: errorHandler))
+  }
+
   var downloads: some View {
     DownloadsView(catalog: DownloadsCatalog(downloadsDatabase: appContext.downloadedFilesDatabase, downloadManager: appContext.downloadManager))
   }
-  
+
   var profile: some View {
     ProfileView(model: ProfileModel(userService: appContext.userService,
                                     errorHandler: errorHandler,
@@ -55,7 +77,7 @@ struct SidebarNavigationDetail: View {
 
 struct SidebarNavigationDetail_Previews: PreviewProvider {
   struct Preview: View {
-    @State private var selection: NavigationTabs = .main
+    @State private var selection: SidebarItem? = .new
     var body: some View {
       SidebarNavigationDetail(selection: $selection)
     }
@@ -64,5 +86,3 @@ struct SidebarNavigationDetail_Previews: PreviewProvider {
     Preview()
   }
 }
-
-#endif

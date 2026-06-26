@@ -30,6 +30,18 @@ final class VideoContentServiceImpl: VideoContentService {
     return response
   }
 
+  func filter(filter: MediaItemsFilter, page: Int?) async throws -> PaginatedData<MediaItem> {
+    let request = FilterItemsRequest(contentType: filter.contentType,
+                                     genres: filter.genres,
+                                     countries: filter.countries,
+                                     year: filter.year,
+                                     sort: filter.sort,
+                                     page: page)
+    let response = try await apiClient.performRequest(with: request,
+                                                      decodingType: PaginatedData<MediaItem>.self)
+    return response
+  }
+
   func fetchDetails(for id: String) async throws -> SingleItemData<MediaItem> {
     let request = ItemDetailsRequest(id: id)
     let response = try await apiClient.performRequest(with: request,
@@ -48,6 +60,20 @@ final class VideoContentServiceImpl: VideoContentService {
     let request = BookmarkItemsRequest(id: id)
     let response = try await apiClient.performRequest(with: request,
                                                       decodingType: ArrayData<MediaItem>.self)
+    return response
+  }
+
+  func fetchHistory(page: Int?) async throws -> HistoryData {
+    let request = HistoryRequest(page: page)
+    let response = try await apiClient.performRequest(with: request,
+                                                      decodingType: HistoryData.self)
+    return response
+  }
+
+  func fetchWatchingSerials(subscribed: Int?) async throws -> ArrayData<WatchingSerial> {
+    let request = WatchingSerialsRequest(subscribed: subscribed)
+    let response = try await apiClient.performRequest(with: request,
+                                                      decodingType: ArrayData<WatchingSerial>.self)
     return response
   }
 
