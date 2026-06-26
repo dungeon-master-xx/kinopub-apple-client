@@ -2,7 +2,7 @@
 //  HeroBackdrop.swift
 //
 //
-//  Apple TV-style cinematic hero header: full-bleed backdrop with a gradient
+//  Apple TV-style cinematic hero header: full-bleed backdrop with a frosted/gradient
 //  fade into the background and an overlay slot for title / metadata / actions.
 //
 
@@ -23,36 +23,50 @@ public struct HeroBackdrop<Overlay: View>: View {
   }
 
   public var body: some View {
-    ZStack(alignment: .bottomLeading) {
-      AsyncImage(url: URL(string: imageURL ?? "")) { image in
-        image
-          .resizable()
-          .renderingMode(.original)
-          .aspectRatio(contentMode: .fill)
-      } placeholder: {
-        Color.KinoPub.skeleton
+    // A base view pinned to the available width keeps every layer (artwork, scrims,
+    // and the bottom-leading overlay) anchored to the screen, so the title/actions never
+    // get pushed off-screen when the backdrop is wider than the viewport (e.g. in portrait).
+    Color.KinoPub.background
+      .frame(maxWidth: .infinity)
+      .frame(height: height)
+      .overlay {
+        AsyncImage(url: URL(string: imageURL ?? "")) { image in
+          image
+            .resizable()
+            .renderingMode(.original)
+            .aspectRatio(contentMode: .fill)
+        } placeholder: {
+          Color.KinoPub.skeleton
+        }
+      }
+      .overlay {
+        // Frosted blur over the lower portion so overlay text never mixes with busy artwork.
+        Rectangle()
+          .fill(.ultraThinMaterial)
+          .mask(
+            LinearGradient(colors: [.clear, .clear, .black],
+                           startPoint: .top,
+                           endPoint: .bottom)
+          )
+      }
+      .overlay {
+        LinearGradient(
+          colors: [
+            Color.KinoPub.background.opacity(0.0),
+            Color.KinoPub.background.opacity(0.5),
+            Color.KinoPub.background
+          ],
+          startPoint: .center,
+          endPoint: .bottom
+        )
+      }
+      .overlay(alignment: .bottomLeading) {
+        overlay
+          .padding(.horizontal, 20)
+          .padding(.bottom, 16)
       }
       .frame(height: height)
-      .frame(maxWidth: .infinity)
       .clipped()
-
-      // Fade the bottom of the artwork into the page background for a seamless transition.
-      LinearGradient(
-        colors: [
-          Color.KinoPub.background.opacity(0.0),
-          Color.KinoPub.background.opacity(0.55),
-          Color.KinoPub.background
-        ],
-        startPoint: .center,
-        endPoint: .bottom
-      )
-      .frame(height: height)
-      .allowsHitTesting(false)
-
-      overlay
-        .padding(.horizontal, 20)
-        .padding(.bottom, 16)
-    }
-    .frame(height: height)
+      .allowsHitTesting(true)
   }
 }

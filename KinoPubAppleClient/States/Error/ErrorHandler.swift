@@ -21,8 +21,11 @@ final class ErrorHandler: ObservableObject {
   @Published var state: State = State(error: nil, showError: false)
   
   /// Sets the error state with the provided error.
+  /// Cancelled requests (e.g. navigating away while shelves are still loading) are ignored
+  /// so they never surface as a spurious error alert.
   /// - Parameter error: The error to be set.
   func setError(_ error: Error) {
+    guard !error.isCancellationError else { return }
     self.state = State(error: error.localizedDescription, showError: true)
   }
   

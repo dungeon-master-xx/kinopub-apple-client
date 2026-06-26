@@ -38,3 +38,26 @@ extension APIClientError: CustomStringConvertible {
   }
 
 }
+
+extension Error {
+  /// `true` when this error — or any error it wraps — represents a cancelled request.
+  /// Requests get cancelled normally when a screen disappears or the user navigates away
+  /// mid-load (e.g. the Home shelves firing several requests at once), so these must never
+  /// be surfaced to the user as an error.
+  var isCancellationError: Bool {
+    if self is CancellationError {
+      return true
+    }
+    let nsError = self as NSError
+    if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+      return true
+    }
+    if let apiError = self as? APIClientError, case .networkError(let underlying) = apiError {
+      return underlying.isCancellationError
+    }
+    if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+      return underlying.isCancellationError
+    }
+    return false
+  }
+}

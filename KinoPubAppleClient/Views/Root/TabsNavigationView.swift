@@ -27,6 +27,7 @@ struct TabsNavigationView: View {
   
   var body: some View {
     TabView {
+      searchTab
       mainTab
       bookmarksTab
       watchingTab
@@ -49,13 +50,24 @@ struct TabsNavigationView: View {
     }
   }
   
+  var searchTab: some View {
+    SearchView(model: SearchModel(itemsService: appContext.contentService,
+                                  authState: authState,
+                                  errorHandler: errorHandler))
+    .tag(NavigationTabs.search)
+    .tabItem {
+      Label("Search", systemImage: "magnifyingglass")
+    }
+    .toolbarBackground(Color.KinoPub.background, for: placement)
+  }
+
   var mainTab: some View {
-    MainView(catalog: MediaCatalog(itemsService: appContext.contentService,
-                                   authState: authState,
-                                   errorHandler: errorHandler))
+    HomeView(model: HomeModel(itemsService: appContext.contentService,
+                              authState: authState,
+                              errorHandler: errorHandler))
     .tag(NavigationTabs.main)
     .tabItem {
-      Label("Main", systemImage: "house")
+      Label("Home", systemImage: "house")
     }
     .toolbarBackground(Color.KinoPub.background, for: placement)
   }
