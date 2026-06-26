@@ -31,13 +31,14 @@ struct SidebarView: View {
       Sidebar(selection: $navigationState.sidebarSelection)
     } detail: {
       SidebarNavigationDetail(selection: $navigationState.sidebarSelection)
+        // Keep the offline banner inside the detail column so it never covers the sidebar.
+        .safeAreaInset(edge: .top, spacing: 0) {
+          if let banner = bannerState {
+            OfflineBanner(tone: banner.tone, title: banner.title)
+          }
+        }
     }
     .accentColor(Color.KinoPub.accent)
-    .safeAreaInset(edge: .top, spacing: 0) {
-      if let banner = bannerState {
-        OfflineBanner(tone: banner.tone, title: banner.title)
-      }
-    }
     .animation(.easeInOut(duration: 0.25), value: networkMonitor.isOnline)
     .animation(.easeInOut(duration: 0.25), value: showReconnected)
     .onChange(of: networkMonitor.isOnline) { online in

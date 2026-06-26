@@ -40,8 +40,35 @@ actor EPGServiceImpl: EPGService {
 
   init(session: URLSession = .shared) {
     self.session = session
-    self.cachesDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+    self.cachesDir = Self.cacheDirectory
+  }
+
+  // MARK: - Cache location / size / clearing (used by the Storage screen)
+
+  /// Directory holding the per-source guide caches.
+  static var cacheDirectory: URL {
+    FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
       ?? FileManager.default.temporaryDirectory
+  }
+
+  /// All on-disk guide cache files (one `epg-cache-<source>.json` per source).
+  static func cacheFileURLs() -> [URL] {
+    let files = (try? FileManager.default.contentsOfDirectory(at: cacheDirectory,
+                                                              includingPropertiesForKeys: [.fileSizeKey])) ?? []
+    return files.filter { $0.lastPathComponent.hasPrefix("epg-cache-") && $0.pathExtension == "json" }
+  }
+
+  /// Total bytes used by the guide caches on disk.
+  static func diskUsageBytes() -> Int64 {
+    cacheFileURLs().reduce(Int64(0)) { acc, url in
+      acc + Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+    }
+  }
+
+  /// Drops every cached guide (disk + memory) so the next fetch re-downloads.
+  func clearCache() {
+    for url in Self.cacheFileURLs() { try? FileManager.default.removeItem(at: url) }
+    memoryCache.removeAll()
   }
 
   func fetchGuide(for channels: [TVChannel], forceRefresh: Bool) async throws -> [Int: [EPGProgram]] {

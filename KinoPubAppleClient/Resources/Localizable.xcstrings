@@ -4502,6 +4502,22 @@
         }
       }
     },
+    "Clear EPG cache": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear EPG cache"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Очистить кэш программы"
+          }
+        }
+      }
+    },
     "Clear Image Cache": {
       "localizations": {
         "az": {
@@ -9506,6 +9522,22 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Jild nomi"
+          }
+        }
+      }
+    },
+    "Freed %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freed %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Освобождено %@"
           }
         }
       }
@@ -17260,6 +17292,22 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Bu yerda hozircha boʻsh"
+          }
+        }
+      }
+    },
+    "Nothing to clear": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to clear"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нечего очищать"
           }
         }
       }
