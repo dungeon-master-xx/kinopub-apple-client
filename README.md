@@ -60,6 +60,18 @@ The app is distributed as an **unsigned IPA** in [Releases](https://github.com/d
 (it's not on the App Store). Install it with AltStore, SideStore, Sideloadly, TrollStore, or sign it
 yourself — full step-by-step guide in the **[Wiki](https://github.com/dungeon-master-office/kinopub-apple-client/wiki/Установка)**.
 
+### Auto-updating source (AltStore · SideStore · Feather)
+
+Add this repo as a source to install and **get new versions automatically**:
+
+```
+https://github.com/dungeon-master-office/kinopub-apple-client/releases/latest/download/apps.json
+```
+
+One-tap on your iPhone/iPad:
+**[➕ Add to AltStore](altstore://source?url=https%3A%2F%2Fgithub.com%2Fdungeon-master-office%2Fkinopub-apple-client%2Freleases%2Flatest%2Fdownload%2Fapps.json)** ·
+**[➕ Add to SideStore](sidestore://source?url=https%3A%2F%2Fgithub.com%2Fdungeon-master-office%2Fkinopub-apple-client%2Freleases%2Flatest%2Fdownload%2Fapps.json)**
+
 You'll need an active kino.pub subscription; sign in with the on-screen device code.
 
 ## Requirements

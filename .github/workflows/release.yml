@@ -46,6 +46,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ steps.tag.outputs.tag }}" dist/*.ipa --clobber --repo "${{ github.repository }}"
 
+      # Regenerate the AltStore/SideStore source (apps.json) from all releases — now including this new
+      # IPA — and publish it as a release asset so `…/releases/latest/download/apps.json` stays current.
+      - name: Update AltStore/SideStore source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./scripts/gen-altstore-source.sh "${{ github.repository }}" dist/apps.json
+          gh release upload "${{ steps.tag.outputs.tag }}" dist/apps.json --clobber --repo "${{ github.repository }}"
+
   macos:
     name: macOS app
     runs-on: macos-15

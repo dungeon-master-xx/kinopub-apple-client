@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+#
+# Generate an AltStore/SideStore source (apps.json) from the repo's GitHub Releases.
+#
+# Every release that has a *.ipa asset becomes a version entry, so AltStore/SideStore (and Feather,
+# which reads the same format) can add this repo as a source and auto-update to the newest build.
+#
+# The file is published as a release asset, so the stable URL
+#   https://github.com/<owner>/<repo>/releases/latest/download/apps.json
+# always serves the latest source.
+#
+# Usage: ./scripts/gen-altstore-source.sh [owner/repo] [output-path]
+#
+set -euo pipefail
+
+REPO="${1:-${GITHUB_REPOSITORY:-dungeon-master-office/kinopub-apple-client}}"
+OUT="${2:-dist/apps.json}"
+RAW="https://raw.githubusercontent.com/${REPO}/main"
+ICONSET="${RAW}/KinoPubAppleClient/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-Default.png"
+
+mkdir -p "$(dirname "${OUT}")"
+
+echo "==> Reading releases of ${REPO}"
+releases="$(gh api "repos/${REPO}/releases" --paginate)"
+
+# One version entry per release that ships an .ipa (newest first).
+versions="$(echo "${releases}" | jq '
+  [ .[]
+    | select(.draft == false)
+    | . as $r
+    | ($r.assets[] | select(.name | endswith(".ipa"))) as $ipa
+    | {
+        version: ($r.tag_name | ltrimstr("v")),
+        date: ($r.published_at | split("T")[0]),
+        localizedDescription: (($r.body // "") | gsub("\r"; "") | .[0:1500]),
+        downloadURL: $ipa.browser_download_url,
+        size: $ipa.size,
+        minOSVersion: "16.0"
+      }
+  ]')"
+
+screenshots="$(printf '%s\n' {1..10} | jq -R '"'"${RAW}"'/Screenshots/\(.).jpeg"' | jq -s '.')"
+
+jq -n \
+  --argjson versions "${versions}" \
+  --argjson screenshots "${screenshots}" \
+  --arg repo "${REPO}" \
+  --arg icon "${ICONSET}" '
+{
+  name: "KinoPub",
+  subtitle: "Unofficial kino.pub client for iPhone & iPad",
+  website: "https://github.com/\($repo)",
+  tintColor: "FF6500",
+  iconURL: $icon,
+  apps: [
+    {
+      name: "KinoPub",
+      bundleIdentifier: "com.kino.pub",
+      developerName: "dungeon-master-office",
+      subtitle: "Unofficial kino.pub client",
+      localizedDescription: "Native iOS/iPadOS client for the kino.pub service: catalog, search by cast & crew, offline downloads, 4K/HDR, sport EPG and more. Community fork — not affiliated with kino.pub.",
+      iconURL: $icon,
+      tintColor: "FF6500",
+      category: "entertainment",
+      screenshotURLs: $screenshots,
+      versions: $versions
+    }
+  ],
+  news: []
+}' > "${OUT}"
+
+echo "✅ Wrote ${OUT} ($(echo "${versions}" | jq 'length') version(s))"
