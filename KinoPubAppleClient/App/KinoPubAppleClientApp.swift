@@ -37,6 +37,10 @@ struct KinoPubAppleClientApp: App {
   var body: some Scene {
     WindowGroup {
       RootView()
+        // The app is dark-only; the color assets' "Any" (light) appearance is authored inconsistently
+        // (dark background but black text), so on a Light-mode Mac text/icons render invisible. Force
+        // dark so the assets always resolve their Dark variant.
+        .preferredColorScheme(.dark)
         .environment(\.appContext, AppContext.shared)
         .environmentObject(navigationState)
         .environmentObject(authState)
@@ -67,6 +71,7 @@ struct KinoPubAppleClientApp: App {
     Settings {
       SettingsView()
         .environmentObject(windowSettings)
+        .preferredColorScheme(.dark)
     }
 #endif
   }
