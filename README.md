@@ -34,24 +34,37 @@ Native **iOS · iPadOS · macOS** client for the [kino.pub](https://kino.pub) se
 
 ## Screenshots
 
+### iPhone
+
 <table>
   <tr>
-    <td><img src="Screenshots/1.jpeg" width="260" alt="screenshot 1"></td>
-    <td><img src="Screenshots/2.jpeg" width="260" alt="screenshot 2"></td>
-    <td><img src="Screenshots/3.jpeg" width="260" alt="screenshot 3"></td>
+    <td><img src="Screenshots/iphone/2.jpeg" width="200" alt="iPhone screenshot"></td>
+    <td><img src="Screenshots/iphone/3.jpeg" width="200" alt="iPhone screenshot"></td>
+    <td><img src="Screenshots/iphone/4.jpeg" width="200" alt="iPhone screenshot"></td>
+    <td><img src="Screenshots/iphone/5.jpeg" width="200" alt="iPhone screenshot"></td>
   </tr>
   <tr>
-    <td><img src="Screenshots/4.jpeg" width="260" alt="screenshot 4"></td>
-    <td><img src="Screenshots/5.jpeg" width="260" alt="screenshot 5"></td>
-    <td><img src="Screenshots/6.jpeg" width="260" alt="screenshot 6"></td>
+    <td><img src="Screenshots/iphone/6.jpeg" width="200" alt="iPhone screenshot"></td>
+    <td><img src="Screenshots/iphone/7.jpeg" width="200" alt="iPhone screenshot"></td>
+    <td><img src="Screenshots/iphone/8.jpeg" width="200" alt="iPhone screenshot"></td>
+    <td><img src="Screenshots/iphone/9.jpeg" width="200" alt="iPhone screenshot"></td>
+  </tr>
+</table>
+
+### iPad
+
+<table>
+  <tr>
+    <td><img src="Screenshots/ipad/1.jpeg" width="320" alt="iPad screenshot"></td>
+    <td><img src="Screenshots/ipad/2.jpeg" width="320" alt="iPad screenshot"></td>
   </tr>
   <tr>
-    <td><img src="Screenshots/7.jpeg" width="260" alt="screenshot 7"></td>
-    <td><img src="Screenshots/8.jpeg" width="260" alt="screenshot 8"></td>
-    <td><img src="Screenshots/9.jpeg" width="260" alt="screenshot 9"></td>
+    <td><img src="Screenshots/ipad/3.jpeg" width="320" alt="iPad screenshot"></td>
+    <td><img src="Screenshots/ipad/4.jpeg" width="320" alt="iPad screenshot"></td>
   </tr>
   <tr>
-    <td><img src="Screenshots/10.jpeg" width="260" alt="screenshot 10"></td>
+    <td><img src="Screenshots/ipad/5.jpeg" width="320" alt="iPad screenshot"></td>
+    <td><img src="Screenshots/ipad/6.jpeg" width="320" alt="iPad screenshot"></td>
   </tr>
 </table>
 

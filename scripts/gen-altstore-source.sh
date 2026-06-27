@@ -17,8 +17,17 @@ REPO="${1:-${GITHUB_REPOSITORY:-dungeon-master-xx/kinopub-apple-client}}"
 OUT="${2:-dist/apps.json}"
 RAW="https://raw.githubusercontent.com/${REPO}/main"
 ICONSET="${RAW}/KinoPubAppleClient/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-Default.png"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 mkdir -p "$(dirname "${OUT}")"
+
+# JSON array of raw-content URLs for the screenshots in Screenshots/<device> (natural-sorted).
+shots_json() {
+  local sub="$1"
+  ( ls "${ROOT_DIR}/Screenshots/${sub}" 2>/dev/null | grep -iE '\.(jpe?g|png)$' | sort -V ) \
+    | while IFS= read -r f; do printf '%s/Screenshots/%s/%s\n' "${RAW}" "${sub}" "${f}"; done \
+    | jq -R . | jq -s '.'
+}
 
 echo "==> Reading releases of ${REPO}"
 releases="$(gh api "repos/${REPO}/releases" --paginate)"
@@ -54,11 +63,13 @@ versions="$(echo "${releases}" | jq '
       }
   ]')"
 
-screenshots="$(printf '%s\n' {1..10} | jq -R '"'"${RAW}"'/Screenshots/\(.).jpeg"' | jq -s '.')"
+iphone_shots="$(shots_json iphone)"
+ipad_shots="$(shots_json ipad)"
 
 jq -n \
   --argjson versions "${versions}" \
-  --argjson screenshots "${screenshots}" \
+  --argjson iphoneShots "${iphone_shots}" \
+  --argjson ipadShots "${ipad_shots}" \
   --arg repo "${REPO}" \
   --arg icon "${ICONSET}" '
 {
@@ -77,7 +88,9 @@ jq -n \
       iconURL: $icon,
       tintColor: "FF6500",
       category: "entertainment",
-      screenshotURLs: $screenshots,
+      # Device-specific screenshots (newer AltStore/SideStore); screenshotURLs is the legacy fallback.
+      screenshots: { iphone: $iphoneShots, ipad: $ipadShots },
+      screenshotURLs: ($iphoneShots + $ipadShots),
 
       # Legacy AltStore fields (older AltStore reads these top-level keys; newer reads `versions`).
       version: ($versions[0].version // "1.0"),
