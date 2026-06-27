@@ -11,7 +11,7 @@ Native **iOS · iPadOS · macOS** client for the [kino.pub](https://kino.pub) se
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20iPadOS%20%7C%20macOS-blue)](#requirements)
 [![Last commit](https://img.shields.io/github/last-commit/dungeon-master-xx/kinopub-apple-client)](https://github.com/dungeon-master-xx/kinopub-apple-client/commits/main)
 
-📥 **[Install](https://github.com/dungeon-master-xx/kinopub-apple-client/wiki/Установка)** · 📖 **[Wiki / FAQ](https://github.com/dungeon-master-xx/kinopub-apple-client/wiki)** · 🏷 **[Releases](https://github.com/dungeon-master-xx/kinopub-apple-client/releases)**
+🌐 **[Website](https://dungeon-master-xx.github.io/kinopub-apple-client/)** · 📥 **[Install](https://github.com/dungeon-master-xx/kinopub-apple-client/wiki/Установка)** · 📖 **[Wiki / FAQ](https://github.com/dungeon-master-xx/kinopub-apple-client/wiki)** · 🏷 **[Releases](https://github.com/dungeon-master-xx/kinopub-apple-client/releases)**
 
 </div>
 
