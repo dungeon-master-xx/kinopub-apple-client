@@ -5,7 +5,7 @@
 Please **do not** open a public issue for security problems.
 
 Use **GitHub's private vulnerability reporting**: go to the
-[Security tab](https://github.com/dungeon-master-office/kinopub-apple-client/security) →
+[Security tab](https://github.com/dungeon-master-xx/kinopub-apple-client/security) →
 **Report a vulnerability**. We'll respond as soon as we reasonably can.
 
 ## Scope
@@ -17,4 +17,4 @@ flow. Reports about the kino.pub backend itself should go to kino.pub, not here.
 ## Supported versions
 
 Only the latest release is supported. Please reproduce issues against the most recent
-[release](https://github.com/dungeon-master-office/kinopub-apple-client/releases/latest) before reporting.
+[release](https://github.com/dungeon-master-xx/kinopub-apple-client/releases/latest) before reporting.

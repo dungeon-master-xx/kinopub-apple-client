@@ -13,7 +13,7 @@
 #
 set -euo pipefail
 
-REPO="${1:-${GITHUB_REPOSITORY:-dungeon-master-office/kinopub-apple-client}}"
+REPO="${1:-${GITHUB_REPOSITORY:-dungeon-master-xx/kinopub-apple-client}}"
 OUT="${2:-dist/apps.json}"
 RAW="https://raw.githubusercontent.com/${REPO}/main"
 ICONSET="${RAW}/KinoPubAppleClient/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-Default.png"
@@ -71,7 +71,7 @@ jq -n \
     {
       name: "KinoPub",
       bundleIdentifier: "com.kino.pub",
-      developerName: "dungeon-master-office",
+      developerName: "dungeon-master-xx",
       subtitle: "Unofficial kino.pub client",
       localizedDescription: "Native iOS/iPadOS client for the kino.pub service: catalog, search by cast & crew, offline downloads, 4K/HDR, sport EPG and more. Community fork — not affiliated with kino.pub.",
       iconURL: $icon,
