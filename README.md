@@ -31,6 +31,29 @@ Native **iOS · iPadOS · macOS · tvOS** client for the [kino.pub](https://kino
 - 🖥 Native macOS UI & full-screen player; 🍎 Apple TV UI
 - 🌍 16 UI languages
 
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="Screenshots/1.jpeg" width="260" alt="screenshot 1"></td>
+    <td><img src="Screenshots/2.jpeg" width="260" alt="screenshot 2"></td>
+    <td><img src="Screenshots/3.jpeg" width="260" alt="screenshot 3"></td>
+  </tr>
+  <tr>
+    <td><img src="Screenshots/4.jpeg" width="260" alt="screenshot 4"></td>
+    <td><img src="Screenshots/5.jpeg" width="260" alt="screenshot 5"></td>
+    <td><img src="Screenshots/6.jpeg" width="260" alt="screenshot 6"></td>
+  </tr>
+  <tr>
+    <td><img src="Screenshots/7.jpeg" width="260" alt="screenshot 7"></td>
+    <td><img src="Screenshots/8.jpeg" width="260" alt="screenshot 8"></td>
+    <td><img src="Screenshots/9.jpeg" width="260" alt="screenshot 9"></td>
+  </tr>
+  <tr>
+    <td><img src="Screenshots/10.jpeg" width="260" alt="screenshot 10"></td>
+  </tr>
+</table>
+
 ## Install
 
 The app is distributed as an **unsigned IPA** in [Releases](https://github.com/dungeon-master-office/kinopub-apple-client/releases/latest)
