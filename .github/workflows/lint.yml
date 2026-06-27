@@ -4,10 +4,10 @@ name: Lint
 # as annotations without blocking merges while the codebase is brought up to standard.
 on:
   push:
-    branches: [ main, integration/all-issues ]
+    branches: [ main ]
     paths: [ '**/*.swift', '.swiftlint.yml', '.swift-format', '.github/workflows/lint.yml' ]
   pull_request:
-    branches: [ main, integration/all-issues ]
+    branches: [ main ]
     paths: [ '**/*.swift', '.swiftlint.yml', '.swift-format' ]
 
 permissions:
