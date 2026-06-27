@@ -2,13 +2,13 @@
 
 # KinoPub — Apple Client
 
-Native **iOS · iPadOS · macOS · tvOS** client for the [kino.pub](https://kino.pub) service, built with SwiftUI.
+Native **iOS · iPadOS · macOS** client for the [kino.pub](https://kino.pub) service, built with SwiftUI.
 
 [![CI](https://github.com/dungeon-master-xx/kinopub-apple-client/actions/workflows/ci.yml/badge.svg)](https://github.com/dungeon-master-xx/kinopub-apple-client/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/dungeon-master-xx/kinopub-apple-client?sort=semver)](https://github.com/dungeon-master-xx/kinopub-apple-client/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/dungeon-master-xx/kinopub-apple-client/total)](https://github.com/dungeon-master-xx/kinopub-apple-client/releases)
 [![AltStore source](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2Fdungeon-master-xx%2Fkinopub-apple-client%2Freleases%2Flatest%2Fdownload%2Fapps.json&query=%24.apps%5B0%5D.versions%5B0%5D.version&prefix=v&label=AltStore&color=1F8AFF)](#auto-updating-source-altstore--sidestore--feather)
-[![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20iPadOS%20%7C%20macOS%20%7C%20tvOS-blue)](#requirements)
+[![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20iPadOS%20%7C%20macOS-blue)](#requirements)
 [![Last commit](https://img.shields.io/github/last-commit/dungeon-master-xx/kinopub-apple-client)](https://github.com/dungeon-master-xx/kinopub-apple-client/commits/main)
 
 📥 **[Install](https://github.com/dungeon-master-xx/kinopub-apple-client/wiki/Установка)** · 📖 **[Wiki / FAQ](https://github.com/dungeon-master-xx/kinopub-apple-client/wiki)** · 🏷 **[Releases](https://github.com/dungeon-master-xx/kinopub-apple-client/releases)**
@@ -29,7 +29,7 @@ Native **iOS · iPadOS · macOS · tvOS** client for the [kino.pub](https://kino
 - 📺 4K / HEVC / **HDR10** on capable devices
 - 🏟 Sport channels with multi-source EPG
 - 🧊 3D video player (SBS / Over-Under, anaglyph)
-- 🖥 Native macOS UI & full-screen player; 🍎 Apple TV UI
+- 🖥 Native macOS UI & full-screen player
 - 🌍 16 UI languages
 
 ## Screenshots
