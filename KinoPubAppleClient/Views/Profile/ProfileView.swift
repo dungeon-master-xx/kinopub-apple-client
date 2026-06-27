@@ -50,7 +50,7 @@ struct ProfileView: View {
                 .skeleton(enabled: model.userData.skeleton ?? false)
               infoRow("Registration Date", "\(model.userData.registrationDateFormatted)")
                 .skeleton(enabled: model.userData.skeleton ?? false)
-              infoRow("App version", Bundle.main.appVersionLong)
+              infoRow("App version", "\(Bundle.main.appVersionLong) (\(Bundle.main.appBuild))")
             }
               
             languageSection

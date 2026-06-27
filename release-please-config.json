@@ -7,7 +7,10 @@
       "include-component-in-tag": false,
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": false
+      "bump-patch-for-minor-pre-major": false,
+      "extra-files": [
+        { "type": "generic", "path": "KinoPubAppleClient.xcodeproj/project.pbxproj" }
+      ]
     }
   },
   "changelog-sections": [
