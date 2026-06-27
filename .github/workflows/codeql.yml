@@ -27,7 +27,19 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: swift
-          build-mode: autobuild
+          build-mode: manual
+
+      # Deterministic build (CodeQL traces the compiler) — same command CI uses.
+      - name: Build for CodeQL
+        run: |
+          xcodebuild \
+            -project KinoPubAppleClient.xcodeproj \
+            -scheme KinoPubAppleClient \
+            -configuration Debug \
+            -destination 'generic/platform=iOS' \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            build
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
