@@ -15,15 +15,6 @@ import CoreImage
 import KinoPubLogging
 import OSLog
 
-/// Central feature toggles. Flip to re-enable work-in-progress features.
-enum FeatureFlags {
-  /// 3D (stereoscopic) playback. OFF: `AVVideoComposition`'s SBS/OU/anaglyph reshaping doesn't
-  /// reliably apply to kino.pub's streams (shows a doubled/packed image), so the whole feature —
-  /// the detail-page mode picker and the player composition — is hidden until reworked (likely a
-  /// Metal / `AVPlayerItemVideoOutput` renderer instead of `AVVideoComposition`).
-  static let threeDEnabled = false
-}
-
 /// How a stereoscopic (3D) source is shown on a flat screen. True stereo can't be output on
 /// iPhone/iPad/Mac, so the choices are: pick one eye (normal 2D) or red-cyan anaglyph (for glasses).
 /// The source can be packed Side-by-Side (two eyes left/right) or Over-Under (top/bottom).
