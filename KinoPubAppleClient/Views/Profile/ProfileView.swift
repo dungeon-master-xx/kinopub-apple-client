@@ -85,6 +85,8 @@ struct ProfileView: View {
               }
             }
 
+            aboutSection
+
             Section {
               Button(action: {
                 showLogoutAlert = true
@@ -142,6 +144,39 @@ struct ProfileView: View {
       Text(value)
         .foregroundStyle(Color.KinoPub.text)
         .multilineTextAlignment(.trailing)
+    }
+  }
+
+  /// Links back to the project: who maintains it, where to report problems, and how to install.
+  private var aboutSection: some View {
+    Section(header: Text("About".localized),
+            footer: Text("Community fork of leoru/kinopub-apple-client, maintained on GitHub. Not affiliated with kino.pub.".localized)) {
+      linkRow("Source Code", systemImage: "chevron.left.forwardslash.chevron.right",
+              url: "https://github.com/dungeon-master-office/kinopub-apple-client")
+      linkRow("Report a Problem", systemImage: "exclamationmark.bubble",
+              url: "https://github.com/dungeon-master-office/kinopub-apple-client/issues/new")
+      linkRow("Install Guide & FAQ", systemImage: "book",
+              url: "https://github.com/dungeon-master-office/kinopub-apple-client/wiki")
+    }
+  }
+
+  @ViewBuilder
+  private func linkRow(_ title: String, systemImage: String, url: String) -> some View {
+    if let link = URL(string: url) {
+      Link(destination: link) {
+        HStack {
+          Image(systemName: systemImage)
+            .foregroundStyle(Color.KinoPub.accent)
+            .frame(width: 24, alignment: .center)
+          Text(title.localized).foregroundStyle(Color.KinoPub.text)
+          Spacer()
+          Image(systemName: "arrow.up.right")
+            .font(.caption)
+            .foregroundStyle(Color.KinoPub.subtitle)
+        }
+        .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
     }
   }
 
