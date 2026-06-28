@@ -109,7 +109,7 @@ class PlayerManager: ObservableObject {
   @Published var playbackError: String?
   
   /// Whether the playing title is a 3D (stereoscopic) release, so the player offers 3D view modes.
-  var is3D: Bool { (playItem as? MediaItem)?.type.lowercased() == "3d" }
+  var is3D: Bool { FeatureFlags.threeDEnabled && (playItem as? MediaItem)?.type.lowercased() == "3d" }
   /// Current 3D view mode (Off for non-3D titles).
   @Published var threeDMode: ThreeDMode = .off
 
@@ -203,6 +203,13 @@ class PlayerManager: ObservableObject {
       if let chosen, FileManager.default.fileExists(atPath: chosen.localFileURL.path) {
         return chosen.localFileURL
       }
+      // A 3D title needs a progressive (non-HLS) source: AVVideoComposition (the SBS/OU/anaglyph
+      // reshaping) is ignored on HLS, so streaming via hls4 would just show the raw packed image.
+      // Use the direct mp4 URL so the 3D composition actually applies.
+      if is3D {
+        let mp4 = BestVideoQualityFinder.bestProgressiveURL(for: playItem.files)
+        if !mp4.isEmpty, let url = URL(string: mp4) { return url }
+      }
       let urlString = BestVideoQualityFinder.findBestURL(for: playItem.files)
       guard !urlString.isEmpty, let url = URL(string: urlString) else { return nil }
       return url
@@ -223,7 +230,7 @@ class PlayerManager: ObservableObject {
     self.downloadedFilesDatabase = downloadedFilesDatabase
     // A 3D title starts in the user's last-chosen mode (default: one eye as 2D, so it's watchable —
     // raw packed stereo would show a doubled image).
-    if watchMode == .media, (playItem as? MediaItem)?.type.lowercased() == "3d" {
+    if watchMode == .media, is3D {
       threeDMode = PlayerManager.preferredThreeDMode
     }
     // Seed the resume point synchronously from the local store so the native "Continue" prompt can

@@ -152,11 +152,11 @@ struct ProfileView: View {
     Section(header: Text("About".localized),
             footer: Text("Community fork of leoru/kinopub-apple-client, maintained on GitHub. Not affiliated with kino.pub.".localized)) {
       linkRow("Source Code", systemImage: "chevron.left.forwardslash.chevron.right",
-              url: "https://github.com/dungeon-master-office/kinopub-apple-client")
+              url: "https://github.com/dungeon-master-xx/kinopub-apple-client")
       linkRow("Report a Problem", systemImage: "exclamationmark.bubble",
-              url: "https://github.com/dungeon-master-office/kinopub-apple-client/issues/new")
+              url: "https://github.com/dungeon-master-xx/kinopub-apple-client/issues/new")
       linkRow("Install Guide & FAQ", systemImage: "book",
-              url: "https://github.com/dungeon-master-office/kinopub-apple-client/wiki")
+              url: "https://github.com/dungeon-master-xx/kinopub-apple-client/wiki")
     }
   }
 

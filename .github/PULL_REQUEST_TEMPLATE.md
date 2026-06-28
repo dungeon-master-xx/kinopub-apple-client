@@ -17,7 +17,6 @@
 - [ ] iPhone
 - [ ] iPad
 - [ ] macOS
-- [ ] Apple TV
 
 ## Checklist
 

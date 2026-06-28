@@ -23,6 +23,21 @@ struct SidebarView: View {
   @State private var showReconnected = false
 
   var body: some View {
+#if os(macOS)
+    // Show auth as full-window content (not a modal sheet): a macOS sheet disables the window's
+    // close button, trapping the user on the activation screen with no way to quit the app.
+    if authState.shouldShowAuthentication {
+      authSheet
+    } else {
+      mainContent
+    }
+#else
+    mainContent
+      .sheet(isPresented: $authState.shouldShowAuthentication) { authSheet }
+#endif
+  }
+
+  private var mainContent: some View {
     // Every section's detail NavigationStack now uses the shared `Route` element type, so the
     // NavigationSplitView detail column reconciles cleanly across section switches (no
     // AnyNavigationPath.comparisonTypeMismatch). That means no per-selection `.id` hack — the
@@ -54,9 +69,6 @@ struct SidebarView: View {
     .onReceive(NotificationCenter.default.publisher(for: .openDownloads)) { _ in
       navigationState.sidebarSelection = .downloads
     }
-    .sheet(isPresented: $authState.shouldShowAuthentication, content: {
-      authSheet
-    })
     .environmentObject(navigationState)
     .environmentObject(errorHandler)
     .task {
@@ -98,9 +110,6 @@ struct SidebarView: View {
     AuthView(model: AuthModel(authService: appContext.authService,
                               authState: authState,
                               errorHandler: errorHandler))
-#if os(macOS)
-    .frame(width: 600, height: 600)
-#endif
   }
 
 }
