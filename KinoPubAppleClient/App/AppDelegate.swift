@@ -44,5 +44,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   func applicationDidFinishLaunching(_ notification: Notification) {
     ImageCache.shared.purgeExpired()
   }
+
+  /// Single-window app: closing the window (red button / Cmd+W) quits, so the user can always leave —
+  /// including from the activation screen.
+  func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }
 #endif
