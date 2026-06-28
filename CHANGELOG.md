@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.0](https://github.com/dungeon-master-xx/kinopub-apple-client/compare/v1.3.0...v1.4.0) (2026-06-28)
+
+
+### ✨ Features
+
+* **altstore:** richer source metadata ([#15](https://github.com/dungeon-master-xx/kinopub-apple-client/issues/15)) ([1bd4c86](https://github.com/dungeon-master-xx/kinopub-apple-client/commit/1bd4c86333096d7b31f194a39c2a208dc8d352aa))
+
+
+### 🐛 Fixes
+
+* **altstore:** declare screenshot width/height (AltStore requires size for iPad) ([#13](https://github.com/dungeon-master-xx/kinopub-apple-client/issues/13)) ([e00065d](https://github.com/dungeon-master-xx/kinopub-apple-client/commit/e00065d9a3ab8bf3a707b497aec23a82dfd51467))
+
 ## [1.3.0](https://github.com/dungeon-master-xx/kinopub-apple-client/compare/v1.2.0...v1.3.0) (2026-06-28)
 
 
