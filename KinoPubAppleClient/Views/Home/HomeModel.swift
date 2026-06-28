@@ -59,6 +59,9 @@ class HomeModel: ObservableObject {
     let item: MediaItem
     let progress: Double?
     let subtitle: String?
+    /// Watched to (or past) the credits — surfaced on the card so a finished title reads as "watched"
+    /// instead of still inviting you to continue.
+    var finished: Bool { (progress ?? 0) >= 0.9 }
   }
 
   private var authState: AuthState

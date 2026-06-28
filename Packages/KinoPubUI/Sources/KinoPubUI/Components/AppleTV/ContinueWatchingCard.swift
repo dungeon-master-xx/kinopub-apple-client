@@ -16,17 +16,20 @@ public struct ContinueWatchingCard: View {
   private let title: String
   private let subtitle: String?
   private let progress: Double?
+  private let finished: Bool
   private let width: CGFloat
 
   public init(imageURL: String?,
               title: String,
               subtitle: String? = nil,
               progress: Double? = nil,
+              finished: Bool = false,
               width: CGFloat = 300) {
     self.imageURL = imageURL
     self.title = title
     self.subtitle = subtitle
     self.progress = progress
+    self.finished = finished
     self.width = width
   }
 
@@ -66,7 +69,7 @@ public struct ContinueWatchingCard: View {
         GeometryReader { geo in
           ZStack(alignment: .leading) {
             Capsule().fill(Color.white.opacity(0.3))
-            Capsule().fill(Color.KinoPub.accent)
+            Capsule().fill(finished ? Color.green : Color.KinoPub.accent)
               .frame(width: geo.size.width * min(max(progress, 0), 1))
           }
         }
@@ -74,9 +77,9 @@ public struct ContinueWatchingCard: View {
         .padding(.bottom, 4)
       }
       HStack(spacing: 6) {
-        Image(systemName: "play.fill")
+        Image(systemName: finished ? "checkmark.circle.fill" : "play.fill")
           .font(.system(size: 12, weight: .bold))
-          .foregroundStyle(.white)
+          .foregroundStyle(finished ? Color.green : .white)
         Text(title)
           .font(.system(size: 15, weight: .semibold))
           .foregroundStyle(.white)
