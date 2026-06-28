@@ -21,12 +21,19 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 mkdir -p "$(dirname "${OUT}")"
 
-# JSON array of raw-content URLs for the screenshots in Screenshots/<device> (natural-sorted).
+# JSON array of {imageURL,width,height} for the screenshots in Screenshots/<device> (natural-sorted).
+# AltStore requires iPad screenshots to declare their size, so we read each image's dimensions.
 shots_json() {
   local sub="$1"
-  ( ls "${ROOT_DIR}/Screenshots/${sub}" 2>/dev/null | grep -iE '\.(jpe?g|png)$' | sort -V ) \
-    | while IFS= read -r f; do printf '%s/Screenshots/%s/%s\n' "${RAW}" "${sub}" "${f}"; done \
-    | jq -R . | jq -s '.'
+  local dir="${ROOT_DIR}/Screenshots/${sub}"
+  ( ls "${dir}" 2>/dev/null | grep -iE '\.(jpe?g|png)$' | sort -V ) | while IFS= read -r f; do
+    local w
+    local h
+    w="$(sips -g pixelWidth  "${dir}/${f}" 2>/dev/null | awk '/pixelWidth/{print $2}')"
+    h="$(sips -g pixelHeight "${dir}/${f}" 2>/dev/null | awk '/pixelHeight/{print $2}')"
+    jq -nc --arg u "${RAW}/Screenshots/${sub}/${f}" --argjson w "${w:-0}" --argjson h "${h:-0}" \
+      '{imageURL: $u, width: $w, height: $h}'
+  done | jq -s '.'
 }
 
 echo "==> Reading releases of ${REPO}"
@@ -90,7 +97,7 @@ jq -n \
       category: "entertainment",
       # Device-specific screenshots (newer AltStore/SideStore); screenshotURLs is the legacy fallback.
       screenshots: { iphone: $iphoneShots, ipad: $ipadShots },
-      screenshotURLs: ($iphoneShots + $ipadShots),
+      screenshotURLs: (($iphoneShots + $ipadShots) | map(.imageURL)),
 
       # Legacy AltStore fields (older AltStore reads these top-level keys; newer reads `versions`).
       version: ($versions[0].version // "1.0"),
