@@ -28,7 +28,6 @@ Native **iOS · iPadOS · macOS** client for the [kino.pub](https://kino.pub) se
 - ⬇️ Offline downloads (iOS HLS `.movpkg`, macOS/fallback mp4)
 - 📺 4K / HEVC / **HDR10** on capable devices
 - 🏟 Sport channels with multi-source EPG
-- 🧊 3D video player (SBS / Over-Under, anaglyph)
 - 🖥 Native macOS UI & full-screen player
 - 🌍 16 UI languages
 
