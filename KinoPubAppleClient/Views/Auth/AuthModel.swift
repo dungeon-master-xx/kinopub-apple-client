@@ -24,6 +24,7 @@ class AuthModel: ObservableObject {
   @Published var verificationURL: String = ""
 
   private var tempVerificationResponse: VerificationResponse?
+  private var pollingTask: Task<Void, Never>?
 
   init(authService: AuthorizationService, authState: AuthState, errorHandler: ErrorHandler) {
     self.authService = authService
@@ -33,6 +34,7 @@ class AuthModel: ObservableObject {
 
   func fetchDeviceCode() {
     Logger.app.debug("Fetch device code...")
+    pollingTask?.cancel()
     errorHandler.reset()
     Task {
       do {
@@ -41,7 +43,7 @@ class AuthModel: ObservableObject {
         self.verificationURL = response.verificationUri
         self.tempVerificationResponse = response
         Logger.app.debug("receive device code: \(response.userCode)")
-        scheduleCheck(for: response)
+        startPolling(for: response)
       } catch {
         handleError(error)
       }
@@ -77,37 +79,66 @@ class AuthModel: ObservableObject {
     #endif
   }
 
-  private func requestToken(by response: VerificationResponse) async throws {
-    Logger.app.debug("request token...")
-    do {
-      try await authService.fetchToken(by: response)
-      authState.userState = .authorized
-      authState.shouldShowAuthentication = false
-      Logger.app.debug("token requested")
-    } catch {
-      handleError(error, response: response)
+  private func startPolling(for response: VerificationResponse) {
+    pollingTask?.cancel()
+    pollingTask = Task { [weak self] in
+      guard let self else { return }
+
+      var interval = max(response.interval, 1)
+      let expiresAt = Date().addingTimeInterval(TimeInterval(response.expiresIn))
+
+      while !Task.isCancelled {
+        if Date() >= expiresAt {
+          Logger.app.debug("device code expired; requesting a replacement")
+          fetchDeviceCode()
+          return
+        }
+
+        do {
+          try await Task.sleep(for: .seconds(interval))
+          try Task.checkCancellation()
+          Logger.app.debug("request token...")
+          try await authService.fetchToken(by: response)
+          authState.userState = .authorized
+          authState.shouldShowAuthentication = false
+          errorHandler.reset()
+          Logger.app.debug("token requested")
+          return
+        } catch is CancellationError {
+          return
+        } catch let error as APIClientError {
+          if error.isAuthorizationPending {
+            continue
+          }
+          if error.shouldSlowAuthorizationPolling {
+            interval += 5
+            Logger.app.debug("authorization poll slowed to \(interval) seconds")
+            continue
+          }
+          if error.isActivationCodeExpired {
+            Logger.app.debug("server expired device code; requesting a replacement")
+            fetchDeviceCode()
+            return
+          }
+          if error.isRetryableTransportError {
+            Logger.app.debug("transient authorization polling error: \(error)")
+            continue
+          }
+
+          handleError(error)
+          return
+        } catch {
+          handleError(error)
+          return
+        }
+      }
     }
   }
 
-  private func scheduleCheck(for response: VerificationResponse) {
-    let timeout = UInt64(response.interval)
-
-    Logger.app.debug("schedule next token scheck...")
-    Task {
-      try await Task.sleep(nanoseconds: timeout * 1_000_000_000)
-      try await requestToken(by: response)
-    }
-  }
-
-  private func handleError(_ error: Error, response: VerificationResponse? = nil) {
+  private func handleError(_ error: Error) {
     Logger.app.debug("got error: \(error)")
 
     guard let error = error as? APIClientError else {
-      return
-    }
-
-    if let response, error.isAuthorizationPending {
-      scheduleCheck(for: response)
       return
     }
 

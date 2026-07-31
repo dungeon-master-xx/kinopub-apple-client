@@ -163,6 +163,54 @@ final class APIClientResponseTests: XCTestCase {
     }
   }
 
+  func testPerformRequest_WhenAuthorizationIsPendingWithoutDescription_DecodesBackendError() async {
+    let json = """
+    {
+      "status": 400,
+      "error": "authorization_pending"
+    }
+    """
+    sessionMock.data = json.data(using: .utf8)
+
+    do {
+      let _: AccessToken = try await apiClient.performRequest(
+        with: RequestData(path: "/oauth2/device", method: "POST"),
+        decodingType: AccessToken.self
+      )
+      XCTFail("Expected an authorization-pending error but decoding succeeded")
+    } catch APIClientError.networkError(let underlying) {
+      let backendError = try? XCTUnwrap(underlying as? BackendError)
+      XCTAssertEqual(backendError?.status, 400)
+      XCTAssertEqual(backendError?.errorCode, .authorizationPending)
+      XCTAssertNil(backendError?.errorDescription)
+    } catch {
+      XCTFail("Expected APIClientError.networkError but got \(error)")
+    }
+  }
+
+  func testPerformRequest_WhenBackendReturnsUnknownErrorCode_PreservesIt() async {
+    let json = """
+    {
+      "status": 400,
+      "error": "new_oauth_error"
+    }
+    """
+    sessionMock.data = json.data(using: .utf8)
+
+    do {
+      let _: AccessToken = try await apiClient.performRequest(
+        with: RequestData(path: "/oauth2/device", method: "POST"),
+        decodingType: AccessToken.self
+      )
+      XCTFail("Expected a backend error but decoding succeeded")
+    } catch APIClientError.networkError(let underlying) {
+      let backendError = try? XCTUnwrap(underlying as? BackendError)
+      XCTAssertEqual(backendError?.errorCode.rawValue, "new_oauth_error")
+    } catch {
+      XCTFail("Expected APIClientError.networkError but got \(error)")
+    }
+  }
+
   // MARK: - Decoding error path
 
   func testPerformRequest_WhenInvalidJSON_ThrowsDecodingError() async {
