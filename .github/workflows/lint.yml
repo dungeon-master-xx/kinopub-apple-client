@@ -7,6 +7,7 @@ on:
     branches: [ main ]
     paths: [ '**/*.swift', '.swiftlint.yml', '.swift-format', '.github/workflows/lint.yml' ]
   pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
     branches: [ main ]
     paths: [ '**/*.swift', '.swiftlint.yml', '.swift-format' ]
 

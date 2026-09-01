@@ -10,6 +10,9 @@ on:
       - '.github/release.yml'
       - 'LICENSE'
   pull_request:
+    # `ready_for_review` is not a default type: without it, flipping a draft PR to ready triggers
+    # nothing, so a long-lived draft keeps whatever stale checks it already had.
+    types: [ opened, synchronize, reopened, ready_for_review ]
     branches: [ main ]
     paths-ignore:
       - '**.md'
