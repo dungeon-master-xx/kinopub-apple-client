@@ -57,7 +57,10 @@ Runners are **`macos-26` / Xcode 26** (so releases ship with Liquid Glass). Work
 
 **Release flow (use PRs; `main` is protected):**
 1. Land work via a PR into `main` (**Conventional Commits** drive the version bump: `feat:` → minor,
-   `fix:` → patch, `feat!:`/`BREAKING CHANGE` → major; `chore/ci/docs/refactor/perf` don't release).
+   `fix:`/`perf:` → patch, `feat!:`/`BREAKING CHANGE` → major; `chore/ci/docs/refactor` don't
+   release). In release-please a type's changelog visibility **is** its releasability, so un-hiding
+   a type in `release-please-config.json` also makes it cut releases — that's how a docs-only commit
+   once opened a release PR.
 2. Merge the auto-opened **Release Please** PR → tags + release + build → artifacts attached.
 
 Notes: the build workflows select the newest Xcode (`Xcode_26*`). CodeQL was removed (too slow).
