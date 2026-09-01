@@ -19,10 +19,7 @@ concurrency:
 
 jobs:
   lint:
-    # Don't burn minutes on fork PRs automatically.
-    if: >-
-      github.event_name == 'push' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+    # Fork PRs run behind GitHub's fork-workflow approval gate (see ci.yml).
     runs-on: macos-26
     timeout-minutes: 15
     steps:
