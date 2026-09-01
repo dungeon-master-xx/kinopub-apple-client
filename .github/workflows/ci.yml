@@ -10,6 +10,9 @@ on:
       - '.github/release.yml'
       - 'LICENSE'
   pull_request:
+    # `ready_for_review` is not a default type: without it, flipping a draft PR to ready triggers
+    # nothing, so a long-lived draft keeps whatever stale checks it already had.
+    types: [ opened, synchronize, reopened, ready_for_review ]
     branches: [ main ]
     paths-ignore:
       - '**.md'
@@ -27,12 +30,11 @@ concurrency:
 
 jobs:
   build:
-    # Anti-spam: PRs opened from forks do NOT auto-run CI (which would burn Actions minutes). Only
-    # direct pushes and same-repo (trusted) PR branches build automatically. A maintainer can still
-    # run a fork PR on demand via the "Approve and run" button / re-running the workflow.
-    if: >-
-      github.event_name == 'push' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+    # Fork PRs are gated by GitHub's own "fork pull request workflows" approval setting, not by a
+    # job-level `if`. That distinction matters: an unapproved run sits *pending*, which correctly
+    # holds the required `build` check, whereas a skipped job is reported as passing — so the old
+    # guard let a fork PR merge into protected `main` with no CI at all. Minutes are free on public
+    # repos, so there was nothing to save either.
     runs-on: macos-26
     timeout-minutes: 30
     steps:
