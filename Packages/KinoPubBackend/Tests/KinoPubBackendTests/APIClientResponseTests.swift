@@ -211,6 +211,45 @@ final class APIClientResponseTests: XCTestCase {
     }
   }
 
+  // MARK: - Transport error path
+
+  /// A dropped connection has to arrive as an `APIClientError` like every other failure — callers
+  /// (device activation, token refresh) classify on that type, and a raw `URLError` slipping
+  /// through means they silently treat a network blip as an unknown fatal error.
+  func testPerformRequest_WhenTransportFails_WrapsErrorInAPIClientError() async {
+    sessionMock.error = URLError(.networkConnectionLost)
+
+    do {
+      let _: AccessToken = try await apiClient.performRequest(
+        with: RequestData(path: "/oauth2/device", method: "POST"),
+        decodingType: AccessToken.self
+      )
+      XCTFail("Expected a transport error but the request succeeded")
+    } catch APIClientError.networkError(let underlying) {
+      XCTAssertTrue(underlying is URLError, "Expected the URLError to be preserved, got \(underlying)")
+      XCTAssertEqual((underlying as? URLError)?.code, .networkConnectionLost)
+    } catch {
+      XCTFail("Expected APIClientError.networkError but got \(error)")
+    }
+  }
+
+  /// Cancellation is the caller giving up, not the network failing, so it must stay itself.
+  func testPerformRequest_WhenCancelled_KeepsCancellationError() async {
+    sessionMock.error = CancellationError()
+
+    do {
+      let _: AccessToken = try await apiClient.performRequest(
+        with: RequestData(path: "/oauth2/device", method: "POST"),
+        decodingType: AccessToken.self
+      )
+      XCTFail("Expected a cancellation but the request succeeded")
+    } catch is CancellationError {
+      // expected
+    } catch {
+      XCTFail("Expected CancellationError but got \(error)")
+    }
+  }
+
   // MARK: - Decoding error path
 
   func testPerformRequest_WhenInvalidJSON_ThrowsDecodingError() async {

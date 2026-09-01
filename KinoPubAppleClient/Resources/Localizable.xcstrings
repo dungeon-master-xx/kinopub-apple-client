@@ -7123,6 +7123,22 @@
         }
       }
     },
+    "Device activation was denied." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Device activation was denied."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В активации устройства отказано."
+          }
+        }
+      }
+    },
     "Device settings" : {
       "localizations" : {
         "az" : {
@@ -24505,6 +24521,22 @@
         }
       }
     },
+    "The activation code expired. Requesting a new one." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The activation code expired. Requesting a new one."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Код активации истёк. Запрашиваем новый."
+          }
+        }
+      }
+    },
     "The app will restart to apply the language change." : {
       "localizations" : {
         "az" : {
@@ -24601,6 +24633,38 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Til oʻzgarishini saqlash uchun ilova yopiladi."
+          }
+        }
+      }
+    },
+    "The server asked the app to check less often." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The server asked the app to check less often."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сервер попросил проверять реже."
+          }
+        }
+      }
+    },
+    "This app build isn't recognized by the KinoPub server." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This app build isn't recognized by the KinoPub server."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сервер KinoPub не распознал эту сборку приложения."
           }
         }
       }
@@ -27444,6 +27508,22 @@
         }
       }
     },
+    "Waiting for the code to be confirmed on kino.pub." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for the code to be confirmed on kino.pub."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ждём подтверждения кода на kino.pub."
+          }
+        }
+      }
+    },
     "Want 4K" : {
       "localizations" : {
         "az" : {
@@ -28844,6 +28924,22 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Tarmoq yoʻq — yuklanmalar mavjud"
+          }
+        }
+      }
+    },
+    "Your KinoPub session isn't authorized. Try activating again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your KinoPub session isn't authorized. Try activating again."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сессия KinoPub не авторизована. Попробуйте активировать заново."
           }
         }
       }

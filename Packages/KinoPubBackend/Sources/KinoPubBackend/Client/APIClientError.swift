@@ -14,6 +14,13 @@ public enum APIClientError: Error {
   case decodingError(Error)
 }
 
+/// Without this, `localizedDescription` falls back to Foundation's generic
+/// "The operation couldn't be completed. (KinoPubBackend.APIClientError error 0.)", which is what
+/// the activation screen used to show instead of the real reason.
+///
+/// This stays deliberately technical: it's the string that reaches logs and any caller that hasn't
+/// localized the failure itself. User-facing copy for the codes the UI cares about lives in the app
+/// target, where the string catalog is (see `APIClientError.localizedMessage`).
 extension APIClientError: LocalizedError {
   public var errorDescription: String? {
     switch self {
@@ -23,29 +30,14 @@ extension APIClientError: LocalizedError {
       return "The request contains invalid URL parameters."
     case .networkError(let error):
       guard let backendError = error as? BackendError else {
-        return "A network error occurred: \(error.localizedDescription)"
+        return error.localizedDescription
       }
 
       if let description = backendError.errorDescription, !description.isEmpty {
         return description
       }
 
-      switch backendError.errorCode {
-      case .authorizationPending:
-        return "Device authorization is still pending."
-      case .slowDown:
-        return "The server asked the app to check less frequently."
-      case .expiredToken:
-        return "The device activation code expired."
-      case .accessDenied:
-        return "Device activation was denied."
-      case .invalidClient:
-        return "The app is not recognized by the KinoPub server."
-      case .unauthorized:
-        return "The KinoPub session is not authorized."
-      default:
-        return "KinoPub server error: \(backendError.errorCode.rawValue)"
-      }
+      return "KinoPub server error: \(backendError.errorCode.rawValue)"
     case .decodingError(let error):
       return "The KinoPub server returned an unexpected response: \(error.localizedDescription)"
     }

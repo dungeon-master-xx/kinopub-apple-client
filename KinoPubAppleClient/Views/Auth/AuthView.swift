@@ -56,6 +56,9 @@ struct AuthView: View {
     .task {
       model.fetchDeviceCode()
     }
+    .onDisappear {
+      model.cancelPolling()
+    }
     .onReceive(model.$close, perform: { shouldClose in
       if shouldClose {
         dismiss()
