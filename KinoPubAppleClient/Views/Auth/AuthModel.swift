@@ -24,6 +24,12 @@ class AuthModel: ObservableObject {
   @Published var verificationURL: String = ""
 
   private var tempVerificationResponse: VerificationResponse?
+  private var pollingTask: Task<Void, Never>?
+
+  /// Consecutive transport failures tolerated before activation gives up and tells the user. The
+  /// device code stays valid across a dropped connection, so a blip must not kill activation — but
+  /// retrying forever would leave a dead screen looking alive.
+  private static let maxTransportRetries = 5
 
   init(authService: AuthorizationService, authState: AuthState, errorHandler: ErrorHandler) {
     self.authService = authService
@@ -31,8 +37,17 @@ class AuthModel: ObservableObject {
     self.errorHandler = errorHandler
   }
 
+  /// Stops activation polling. Called when the activation screen goes away — the task holds a
+  /// strong reference to this model while it loops, so without this it would keep hitting the API
+  /// (and keep the model alive) long after the user closed the screen.
+  func cancelPolling() {
+    pollingTask?.cancel()
+    pollingTask = nil
+  }
+
   func fetchDeviceCode() {
     Logger.app.debug("Fetch device code...")
+    cancelPolling()
     errorHandler.reset()
     Task {
       do {
@@ -41,7 +56,7 @@ class AuthModel: ObservableObject {
         self.verificationURL = response.verificationUri
         self.tempVerificationResponse = response
         Logger.app.debug("receive device code: \(response.userCode)")
-        scheduleCheck(for: response)
+        startPolling(for: response)
       } catch {
         handleError(error)
       }
@@ -77,40 +92,78 @@ class AuthModel: ObservableObject {
     #endif
   }
 
-  private func requestToken(by response: VerificationResponse) async throws {
-    Logger.app.debug("request token...")
-    do {
-      try await authService.fetchToken(by: response)
-      authState.userState = .authorized
-      authState.shouldShowAuthentication = false
-      Logger.app.debug("token requested")
-    } catch {
-      handleError(error, response: response)
+  private func startPolling(for response: VerificationResponse) {
+    pollingTask?.cancel()
+    pollingTask = Task { [weak self] in
+      guard let self else { return }
+
+      var interval = max(response.interval, 1)
+      var transportFailures = 0
+      let expiresAt = Date().addingTimeInterval(TimeInterval(response.expiresIn))
+
+      while !Task.isCancelled {
+        if Date() >= expiresAt {
+          Logger.app.debug("device code expired; requesting a replacement")
+          fetchDeviceCode()
+          return
+        }
+
+        do {
+          try await Task.sleep(for: .seconds(interval))
+          try Task.checkCancellation()
+          Logger.app.debug("request token...")
+          try await authService.fetchToken(by: response)
+          authState.userState = .authorized
+          authState.shouldShowAuthentication = false
+          errorHandler.reset()
+          Logger.app.debug("token requested")
+          return
+        } catch is CancellationError {
+          return
+        } catch let error as APIClientError {
+          if error.isCancellationError {
+            return
+          }
+          if error.isAuthorizationPending {
+            // The server answered, so whatever connection trouble we had is over.
+            transportFailures = 0
+            continue
+          }
+          if error.shouldSlowAuthorizationPolling {
+            transportFailures = 0
+            interval += 5
+            Logger.app.debug("authorization poll slowed to \(interval) seconds")
+            continue
+          }
+          if error.isActivationCodeExpired {
+            Logger.app.debug("server expired device code; requesting a replacement")
+            fetchDeviceCode()
+            return
+          }
+          if error.isRetryableTransportError {
+            transportFailures += 1
+            guard transportFailures < Self.maxTransportRetries else {
+              Logger.app.debug("giving up after \(transportFailures) transport failures")
+              handleError(error)
+              return
+            }
+            Logger.app.debug("transient polling error \(transportFailures)/\(Self.maxTransportRetries): \(error)")
+            continue
+          }
+
+          handleError(error)
+          return
+        } catch {
+          handleError(error)
+          return
+        }
+      }
     }
   }
 
-  private func scheduleCheck(for response: VerificationResponse) {
-    let timeout = UInt64(response.interval)
-
-    Logger.app.debug("schedule next token scheck...")
-    Task {
-      try await Task.sleep(nanoseconds: timeout * 1_000_000_000)
-      try await requestToken(by: response)
-    }
-  }
-
-  private func handleError(_ error: Error, response: VerificationResponse? = nil) {
+  private func handleError(_ error: Error) {
     Logger.app.debug("got error: \(error)")
-
-    guard let error = error as? APIClientError else {
-      return
-    }
-
-    if let response, error.isAuthorizationPending {
-      scheduleCheck(for: response)
-      return
-    }
-
+    // `setError` drops cancellations on its own, so they never reach the user as an alert.
     errorHandler.setError(error)
   }
 

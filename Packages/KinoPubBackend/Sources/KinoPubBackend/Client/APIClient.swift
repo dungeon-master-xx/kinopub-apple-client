@@ -47,7 +47,18 @@ public class APIClient {
     // Notify plugins
     plugins.forEach { $0.willSend(preparedRequest) }
 
-    let (data, response) = try await session.data(for: preparedRequest)
+    // Transport failures (offline, timeout, connection lost) must leave this client as an
+    // `APIClientError` like every other failure, so callers can classify them instead of having to
+    // sniff a raw `URLError` that leaked through. Cancellation stays itself: "we gave up" is not a
+    // network failure.
+    let data: Data
+    let response: URLResponse
+    do {
+      (data, response) = try await session.data(for: preparedRequest)
+    } catch {
+      if error is CancellationError { throw error }
+      throw APIClientError.networkError(error)
+    }
 
     // Notify plugins
     plugins.forEach { $0.didReceive(response, data: data) }

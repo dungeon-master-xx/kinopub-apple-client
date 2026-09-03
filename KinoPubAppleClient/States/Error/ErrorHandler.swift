@@ -26,7 +26,7 @@ final class ErrorHandler: ObservableObject {
   /// - Parameter error: The error to be set.
   func setError(_ error: Error) {
     guard !error.isCancellationError else { return }
-    self.state = State(error: error.localizedDescription, showError: true)
+    self.state = State(error: error.userFacingMessage, showError: true)
   }
   
   /// Resets the error state.
