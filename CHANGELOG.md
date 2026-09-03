@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/dungeon-master-xx/kinopub-apple-client/compare/v1.5.0...v1.5.1) (2026-09-03)
+
+
+### 🐛 Fixes
+
+* make device activation polling resilient ([#26](https://github.com/dungeon-master-xx/kinopub-apple-client/issues/26)) ([afc0604](https://github.com/dungeon-master-xx/kinopub-apple-client/commit/afc060434b124be37ff099d0936835a7eae7ad82))
+
 ## [1.5.0](https://github.com/dungeon-master-xx/kinopub-apple-client/compare/v1.4.2...v1.5.0) (2026-06-28)
 
 
